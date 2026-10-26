@@ -1,0 +1,70 @@
+{
+  "status": "passed",
+  "mode": "isolated fictional database; no live model calls",
+  "checks": {
+    "confirmed_recommendations": true,
+    "all_four_world_actions": true,
+    "design_research_detail": true,
+    "source_citations": true,
+    "explicit_shortlist_save": true,
+    "comparison_design_software": true,
+    "optional_college_routing": true,
+    "groq_unavailable_labeled_fallback": true,
+    "reload_and_saved_revisit": true,
+    "unconfirmed_refresh_gate": true,
+    "portfolio_preserved_after_profile_edit": true,
+    "keyboard_save_and_revisit": true
+  },
+  "xp": 70,
+  "exploration_snapshots": 3,
+  "shortlisted_worlds": [
+    "design"
+  ],
+  "responsive": [
+    {
+      "scrollWidth": 375,
+      "titleSize": "28px",
+      "view": "selection",
+      "width": 375,
+      "worldActions": 4
+    },
+    {
+      "scrollWidth": 768,
+      "titleSize": "36px",
+      "view": "selection",
+      "width": 768,
+      "worldActions": 4
+    },
+    {
+      "scrollWidth": 1279,
+      "titleSize": "36px",
+      "view": "selection",
+      "width": 1279,
+      "worldActions": 4
+    },
+    {
+      "scrollWidth": 375,
+      "sourceLinks": 9,
+      "view": "detail",
+      "width": 375
+    },
+    {
+      "scrollWidth": 768,
+      "sourceLinks": 9,
+      "view": "detail",
+      "width": 768
+    },
+    {
+      "scrollWidth": 1279,
+      "sourceLinks": 9,
+      "view": "detail",
+      "width": 1279
+    }
+  ],
+  "unverified": [
+    "live Groq inference",
+    "full screen-reader audit"
+  ],
+  "console_errors": [],
+  "expected_api_gate_status": 409
+}

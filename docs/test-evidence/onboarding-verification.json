@@ -1,0 +1,180 @@
+{
+  "scope": "Welcome, returning explorer choice and existing Switch Explorer setup; no agent or other page behavior changes",
+  "diagnosis_before_changes": [
+    "Active explorer correctly resumed Home; explicit switching used the separate profiles view.",
+    "Unselected Home always showed setup even with browser-remembered explorers.",
+    "First-time form lacked avatars and fictional acknowledgement. Switch form defaulted to Grade 11.",
+    "No durable request identity prevented duplicate explorer creation after a lost response."
+  ],
+  "entry_behavior": {
+    "fresh": "Welcome and shared setup; brand-only header",
+    "remembered_without_active": "Continue My Adventure / Create a New Explorer; no automatic selection",
+    "valid_active": "Existing Adventure Home and persisted progress",
+    "explicit_switch": "Existing profiles route with shared blank setup and browser-associated saved list"
+  },
+  "association": "Existing browser-local cq_pid/cq_explorers IDs; each remembered ID validated through existing backend GET. No server-wide profile-list endpoint or first-global-profile selection. This is not authentication.",
+  "creation_contract": {
+    "endpoint": "POST /api/profiles",
+    "required": [
+      "alias: trimmed fictional nickname, 2–40 characters",
+      "grade: explicit integer 9–12",
+      "fictional_ack: boolean true"
+    ],
+    "retry": "React persists a UUID creation_key in sessionStorage until a validated success. SQLite serializes keyed creation and receipt together. Matching retries return the same profile; changed payload with same key returns 409. Avatar and association remain browser-local.",
+    "rewards": "Zero XP, no quest completion, no profile confirmation from creation."
+  },
+  "automated": {
+    "baseline_backend": {
+      "passed": 203,
+      "failed": 0,
+      "skipped": 0
+    },
+    "baseline_frontend": {
+      "passed": 175,
+      "failed": 0,
+      "skipped": 0
+    },
+    "final_backend": {
+      "passed": 208,
+      "failed": 0,
+      "skipped": 0
+    },
+    "final_frontend": {
+      "passed": 186,
+      "failed": 0,
+      "skipped": 0
+    },
+    "production_build": "passed (Vite 5.4.21)",
+    "backend_compilation": "passed",
+    "backend_restart": "passed; /api/health reports langgraph; existing confirmed fictional explorer read successfully"
+  },
+  "commands": [
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": ".venv/bin/python -m unittest discover -s tests -v"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm test"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm run build"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": "PYTHONPYCACHEPREFIX=/private/tmp/careerquest-onboarding-pycache .venv/bin/python -m compileall -q careerquest app.py tests scripts"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": "CAREERQUEST_DB=/private/tmp/careerquest-onboarding-browser.sqlite3 .venv/bin/python -m uvicorn careerquest_onboarding_server:app --app-dir /private/tmp --host 127.0.0.1 --port 18113 --no-proxy-headers"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": ".venv/bin/python -m uvicorn careerquest.api:app --host 127.0.0.1 --port 8000 --env-file .env --no-proxy-headers"
+    }
+  ],
+  "browser": {
+    "data": "Separate /private/tmp SQLite database and isolated .localhost origins; normal demo profiles were never selected or edited by these UI tests.",
+    "passed": [
+      "Fresh origin shows setup despite unrelated existing server profiles; no global record is selected or listed.",
+      "No student identity, grade, XP or main student navigation before selection.",
+      "Empty/whitespace nickname, missing grade and unchecked acknowledgement each disable creation.",
+      "Keyboard arrow selection changes avatar and shows visible focus; Enter creates an explorer.",
+      "Successful creation shows Welcome aboard and one First Mission action; it opens actual Quest 1.",
+      "Double-click creation produces one profile and one receipt.",
+      "One quest saved: reload restores 20 XP, saved answer and Continue Quest 2.",
+      "Explicit Switch Explorer retains the active explorer and opens blank nickname, no grade, unchecked acknowledgement.",
+      "Returning with no active selection offers Continue and New; saved list includes only that origin’s associated explorers.",
+      "Create a New Explorer opens setup separately from saved list.",
+      "Simulated lost response after a successful save preserves entered values. Reload and resubmit with persisted key recover one matching explorer, zero XP, unconfirmed profile.",
+      "Switching back and reloading retains the earlier explorer’s answer, 20 XP and Quest 2 resume.",
+      "Measured widths 375, 768 and 1280 CSS pixels have matching document widths; mobile setup stacks and accepts a 40-character nickname without overflow.",
+      "Final returning-origin console error readback empty."
+    ],
+    "simulation_details": "Temporary verification middleware returns 404 for a chosen isolated fixture ID to exercise expired active association, then is disabled. No records are deleted. Another temporary middleware returns one 503 after a successful POST to simulate loss of response; the subsequent normal retry recovers the same receipt. No such middleware was added to application source.",
+    "typography": {
+      "desktop_title_px": 42,
+      "mobile_title_px": 30,
+      "desktop_body_input_label_px": 18,
+      "mobile_body_label_px": 17,
+      "avatar_labels_and_support_min_px": 15,
+      "acknowledgement_px": 17
+    }
+  },
+  "data_preservation": {
+    "original_profiles": 13,
+    "changed_original_tables": [],
+    "additive_tables": [
+      "explorer_creation_receipts"
+    ],
+    "normal_creation_receipt_rows": 0,
+    "protected_agent_and_other_page_changes": [],
+    "database_reset": false,
+    "secrets_inspected": false
+  },
+  "changed_files": [
+    "README.md",
+    "careerquest/api.py",
+    "careerquest/store.py",
+    "frontend/src/App.jsx",
+    "frontend/src/components/AppShell.jsx",
+    "frontend/src/components/ExplorerSelection.jsx",
+    "frontend/src/components/ExplorerSetup.jsx",
+    "frontend/src/components/explorer-setup.css",
+    "frontend/src/explorerSetup.js",
+    "frontend/src/pages/Welcome.jsx",
+    "frontend/src/pages/welcome.css",
+    "frontend/src/welcomeMode.js",
+    "frontend/tests/explorer-setup.test.js",
+    "frontend/tests/global-ui.test.js",
+    "frontend/tests/welcome-render.test.js",
+    "scripts/smoke_discovery_agent.py",
+    "scripts/smoke_discovery_guide.py",
+    "scripts/smoke_discovery_handoff.py",
+    "tests/test_adventure_home.py",
+    "tests/test_api.py",
+    "tests/test_career_celebrations.py",
+    "tests/test_career_discovery_milestone.py",
+    "tests/test_career_recommendations_paths.py",
+    "tests/test_career_worlds.py",
+    "tests/test_developer_research.py",
+    "tests/test_discovery_agent.py",
+    "tests/test_discovery_feedback_workflow.py",
+    "tests/test_discovery_flow.py",
+    "tests/test_discovery_guide.py",
+    "tests/test_discovery_handoff.py",
+    "tests/test_explorer_setup.py",
+    "tests/test_portfolio_flow.py",
+    "tests/test_profile_review_flow.py",
+    "tests/test_welcome_flow.py"
+  ],
+  "test_fixture_note": "Existing Python API test and smoke fixtures only add fictional_ack:true. Their prior behavioral assertions are unchanged. Two existing frontend presentation assertions were updated for the requested first-time form and minimal header; new assertions cover entry states and separation.",
+  "intermediate_failures": [
+    "Initial npm run build was issued from repository root and failed ENOENT; corrected to frontend directory. A few repository-relative read/style-append commands were issued from frontend and failed; corrected before final build.",
+    "First frontend run had two old presentation expectation failures for the now-replaced first-time form/header; updated to the requested requirements.",
+    "A new test initially assumed GET /api/profiles would return 405. The existing static mount returns 404; corrected that new assertion to the actual no-list behavior. All original test expectations retained except the explicitly changed frontend presentation.",
+    "A float viewport override was rejected by the browser tool; final measurements use supported integer overrides and actual DOM widths."
+  ],
+  "unverified": [
+    "No full VoiceOver or other assistive-technology audit; native accessibility tree and keyboard controls were checked.",
+    "OS reduced-motion preference was not toggled; reduced-motion CSS retained and setup overrides inspected.",
+    "No real iOS/Android device or separate private-browser profile was used; fresh per-origin storage and desktop Chrome responsive viewports were used.",
+    "No live Groq inference or new career/portfolio flow walkthrough in this onboarding-only scope; existing backend/frontend regression suites cover those features.",
+    "A reload after a failed creation response requires re-entering the same setup; the pending retry key survives and prevents duplicate creation.",
+    "The three optional discovery smoke scripts received only the required fictional-ack fixture update and compiled successfully; they were not separately executed."
+  ],
+  "screenshots": [
+    "onboarding-first-time-desktop.jpg",
+    "onboarding-first-time-mobile.jpg",
+    "onboarding-returning-choice-desktop.jpg",
+    "onboarding-active-returning.jpg"
+  ],
+  "stop": "Stopped after onboarding/returning/Switch Explorer verification.",
+  "generated_build_artifacts": [
+    "frontend/dist/index.html",
+    "frontend/dist/assets/index-DkiF48Y8.css",
+    "frontend/dist/assets/index-JiDJBL2I.js"
+  ],
+  "cleanup": "Isolated browser tabs closed, temporary viewport overrides cleared and isolated verification server stopped. Normal backend remains running on port 8000; original selected demo explorer unchanged."
+}

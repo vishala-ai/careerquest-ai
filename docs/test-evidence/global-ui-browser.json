@@ -1,0 +1,23 @@
+{
+  "fictional_only": true,
+  "student_count": 1,
+  "nickname": "Juniper Fictional",
+  "grade": 10,
+  "xp": 70,
+  "quest_count": 3,
+  "confirmed": true,
+  "portfolio_version_count": 2,
+  "current_portfolio": true,
+  "path_version_count": 2,
+  "responsive_css_widths": [
+    375,
+    768,
+    1279
+  ],
+  "horizontal_overflow_final": false,
+  "unconfirmed_research_http": 409,
+  "console_errors": [],
+  "browser_flow": "creation, three quests, explicit confirmation, research, explicit shortlist, milestone, portfolio path and completion, edit/reconfirmation, new portfolio version",
+  "motion": "CSSOM reduce rule checked; OS preference not activated",
+  "capture_limitation": "final expanded screenshot capture interrupted after prior screenshots were saved"
+}

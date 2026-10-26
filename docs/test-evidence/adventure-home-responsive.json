@@ -1,0 +1,44 @@
+[
+  {
+    "body": "17px",
+    "scrollWidth": 375,
+    "textSizes": [
+      "15px",
+      "17px",
+      "28px",
+      "21px",
+      "16px",
+      "18px"
+    ],
+    "title": "28px",
+    "width": 375
+  },
+  {
+    "body": "18px",
+    "scrollWidth": 768,
+    "textSizes": [
+      "15px",
+      "18px",
+      "54px",
+      "21px",
+      "16px",
+      "17px"
+    ],
+    "title": "36px",
+    "width": 768
+  },
+  {
+    "body": "18px",
+    "scrollWidth": 1280,
+    "textSizes": [
+      "15px",
+      "18px",
+      "54px",
+      "21px",
+      "16px",
+      "17px"
+    ],
+    "title": "36px",
+    "width": 1280
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "pdf_endpoint": true,
+  "scoped_celebration_endpoint": true,
+  "database_schema_and_all_row_fingerprints_unchanged": true,
+  "developer_access_http": 403
+}

@@ -1,0 +1,34 @@
+# Authenticated alias-only demo. See docs/CLOUD_DEPLOYMENT.md before publishing.
+entrypoint = "careerquest/api.py"
+modules = ["python-3.12", "nodejs-22"]
+run = "bash scripts/replit-setup.sh && bash scripts/replit-run.sh"
+
+[env]
+CAREERQUEST_HOST = "0.0.0.0"
+PORT = "8000"
+GROQ_MODEL = "openai/gpt-oss-120b"
+CAREERQUEST_DEV_TOOLS = "0"
+CAREERQUEST_DATABASE_SCHEMA = "careerquest_demo"
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["bash", "scripts/replit-setup.sh"]
+run = ["bash", "scripts/replit-production.sh"]
+
+[[ports]]
+localPort = 8000
+externalPort = 80
+
+[packager.features]
+guessImports = false
+
+[workflows]
+runButton = "CareerQuest AI"
+
+[[workflows.workflow]]
+name = "CareerQuest AI"
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/replit-setup.sh && bash scripts/replit-run.sh"

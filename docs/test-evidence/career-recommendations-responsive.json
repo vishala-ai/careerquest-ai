@@ -1,0 +1,42 @@
+[
+  {
+    "bodySize": "17px",
+    "documentWidth": 562,
+    "gridColumns": "530.508px",
+    "titleSize": "28px",
+    "view": "landing",
+    "width": 562
+  },
+  {
+    "bodySize": "18px",
+    "documentWidth": 1920,
+    "gridColumns": "413.332px 413.344px 413.344px",
+    "titleSize": "36px",
+    "view": "landing",
+    "width": 1920
+  },
+  {
+    "bodySize": "17px",
+    "documentWidth": 375,
+    "titleSize": "28px",
+    "view": "landing-and-paths",
+    "width": 375
+  },
+  {
+    "documentWidth": 375,
+    "scrollRegionWidth": 296,
+    "tableWidth": 720,
+    "view": "comparison",
+    "width": 375
+  },
+  {
+    "documentWidth": 768,
+    "view": "comparison-tablet",
+    "width": 768
+  },
+  {
+    "documentWidth": 1279,
+    "view": "comparison-desktop",
+    "width": 1279
+  }
+]

@@ -1,0 +1,12 @@
+[
+  ".replit",
+  "careerquest/api.py",
+  "careerquest/postgres.py",
+  "careerquest/store.py",
+  "docs/CLOUD_DEPLOYMENT.md",
+  "docs/REPLIT_IMPORT_VERIFICATION.md",
+  "scripts/account_admin.py",
+  "scripts/package_replit.py",
+  "scripts/replit-setup.sh",
+  "tests/test_auth.py"
+]

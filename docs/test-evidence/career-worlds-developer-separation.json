@@ -1,0 +1,17 @@
+{
+  "fictional_only": true,
+  "student_debug_controls": 0,
+  "student_next_action_count": 1,
+  "browser_js_errors": [],
+  "xp": 70,
+  "explorations": 3,
+  "shortlist_count": 1,
+  "next_action": "view_portfolio",
+  "normal_environment_developer_page": "403 observed",
+  "local_developer_receipts": "passed",
+  "controlled_failure": "blocked / ConnectionError observed",
+  "groq_fallback": "bounded_policy_fallback / RuntimeError; key deliberately unavailable",
+  "live_groq_inference": false,
+  "reload_and_test_server_restart_persistence": true,
+  "responsive_widths": "Not verified: viewport override did not change measured 2880px width; override reset."
+}

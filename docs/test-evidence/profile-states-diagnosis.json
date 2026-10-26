@@ -1,0 +1,18 @@
+{
+  "server": "FastAPI static production build on port 8000",
+  "index_matches_disk": true,
+  "served_js": "/assets/index-D0917bLY.js",
+  "js_matches_disk": true,
+  "js_sha256": "c0904b3bc5ab75ddccbc2c882d3c2dc56085500b7c79580c700610da98d55635",
+  "feedback_component_present": true,
+  "confirmed_plain_panel_present": true,
+  "index_headers": {
+    "last-modified": "Sun, 25 Oct 2026 08:33:13 GMT",
+    "etag": "\"517c89204b94a914d2f7137b7beb9f7e\""
+  },
+  "browser_loaded_js": "/assets/index-D0917bLY.js",
+  "browser_profile_status": "Confirmed profile \u00b7 Version 4",
+  "browser_feedback_radios": 0,
+  "only_profile_component": "frontend/src/pages/ExplorerProfile.jsx",
+  "cause": "Current confirmed branch intentionally does not mount ProfileDiscoveryReview and retained its plain summary; not a stale build or duplicate component"
+}

@@ -1,0 +1,34 @@
+{
+  "mode": "isolated fictional SQLite; explicit deterministic fallback, not live Groq",
+  "student": "Lumen Fictional",
+  "checks": {
+    "quests": true,
+    "not_really_correction": true,
+    "yes_separate_from_confirmation": true,
+    "explicit_confirmation": true,
+    "all_worlds_open_before_confirmation": true,
+    "profile_change_hides_old_suggestions": true,
+    "reload_reconfirmation": true,
+    "uncertain_profile_no_forced_selection": true,
+    "keyboard_handoff_disclosure": true
+  },
+  "responsive": [
+    {
+      "cards": 4,
+      "scrollWidth": 375,
+      "width": 375
+    },
+    {
+      "cards": 4,
+      "scrollWidth": 768,
+      "width": 768
+    },
+    {
+      "cards": 4,
+      "scrollWidth": 1279,
+      "width": 1279
+    }
+  ],
+  "screen_reader": "semantic accessibility tree inspected; no assistive technology audit",
+  "final_catalogue_descriptions_visible": true
+}

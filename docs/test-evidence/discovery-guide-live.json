@@ -1,0 +1,85 @@
+{
+  "check": "LIVE Groq Discovery Guide smoke test",
+  "mocked": false,
+  "status": "passed",
+  "generation_status": "groq",
+  "model": "openai/gpt-oss-120b",
+  "error_type": null,
+  "story": {
+    "what_you_chose": [
+      {
+        "choice_id": "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:0",
+        "choice": "Build a mini-app"
+      },
+      {
+        "choice_id": "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:1",
+        "choice": "Analyze the data"
+      },
+      {
+        "choice_id": "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:2",
+        "choice": "Build something"
+      }
+    ],
+    "what_this_might_suggest": [
+      {
+        "text": "These choices might be a reason to explore making useful digital tools.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:0"
+        ]
+      },
+      {
+        "text": "These choices might be a reason to explore investigating questions.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:1"
+        ]
+      },
+      {
+        "text": "These choices might be a reason to explore trying ideas through prototypes.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:2"
+        ]
+      }
+    ],
+    "what_you_could_try_next": [
+      {
+        "text": "Sketch a tiny app that could help with an everyday task.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:0"
+        ]
+      },
+      {
+        "text": "Write down a question and plan a small, safe observation.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:1"
+        ]
+      },
+      {
+        "text": "Make a paper prototype and notice what you would change.",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:2"
+        ]
+      }
+    ],
+    "career_worlds": [
+      {
+        "world_id": "bioengineering",
+        "choice_ids": [
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:0",
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:1",
+          "f0d679f3-1d30-4f49-b3be-c6d74d3215ba:quest:2"
+        ],
+        "title": "Biomedical Engineering",
+        "source": "BLS Occupational Outlook Handbook",
+        "url": "https://www.bls.gov/ooh/architecture-and-engineering/bioengineers-and-biomedical-engineers.htm",
+        "live_verified": false
+      }
+    ]
+  },
+  "quest_xp": 60,
+  "confirmed": false,
+  "feedback_persisted": "Somewhat",
+  "history_count": 1,
+  "cached_replay": true,
+  "roadmap_gate": 409,
+  "database": "temporary fictional database; normal records untouched"
+}

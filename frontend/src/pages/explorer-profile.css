@@ -1,0 +1,75 @@
+.spec-shell .spec-page.explorer-profile-page .page-heading h1 { font-size:36px;line-height:1.18;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .page-heading>p, .spec-shell .spec-page.explorer-profile-page .profile-review-status>p { font-size:18px;line-height:1.65; }
+.spec-shell .spec-page.explorer-profile-page .review-layout { align-items:start; }
+.spec-shell .spec-page.explorer-profile-page .review-panel.confirmed-summary-panel { padding:0;overflow:hidden; }
+.spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero { display:flex;align-items:center;justify-content:space-between;gap:24px;padding:30px;background:linear-gradient(125deg,#ede5ff,#faf7ff 70%);border-bottom:1px solid #e4d9f8; }
+.spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero>div:first-child { min-width:0; }
+.spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero h2 { font-size:28px;line-height:1.25;color:#332051;margin:18px 0 12px;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero p { color:#58446f;font-size:18px;line-height:1.65;margin:0; }
+.spec-shell .spec-page.explorer-profile-page .profile-confirmed-badge { display:inline-flex;gap:8px;align-items:center;padding:9px 13px;background:#fff;border:1px solid #b8d8ca;border-radius:30px;color:#235747;font-size:15px;font-weight:700; }
+.spec-shell .spec-page.explorer-profile-page .profile-compass-art { position:relative;display:grid;place-items:center;flex:0 0 106px;height:106px;border:1px solid #c9b9ed;border-radius:50%;color:#6a44bd;background:#f5f0ff; }
+.spec-shell .spec-page.explorer-profile-page .profile-compass-art>svg:last-child { position:absolute;right:-4px;top:-5px;background:#faf7ff; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary-body { padding:28px; }
+.spec-shell .spec-page.explorer-profile-page .profile-section-title { font-size:21px;margin:0 0 18px; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card { min-width:0;padding:20px;border:1px solid #ded3f2;border-radius:18px;background:#fbf9ff; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card:nth-child(3n+2) { background:#f3faf7;border-color:#cfe5db; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card:nth-child(3n) { background:#f6f5ff; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-icon { display:grid;place-items:center;width:48px;height:48px;border-radius:14px;color:#6541ad;background:#eee6fc; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card:nth-child(3n+2) .profile-interest-icon { color:#32634d;background:#e2f2e9; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card h4 { font-size:21px;color:#322642;margin:15px 0 8px;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-interest-card p { font-size:16px;line-height:1.6;color:#5a5067;margin:0;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid { display:grid;gap:15px;margin-top:24px; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid article { display:flex;align-items:flex-start;gap:15px;padding:20px;background:#fff;border:1px solid #e4deed;border-radius:17px; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid article>span { flex:0 0 auto;color:#7654b6; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid article>div { min-width:0; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid h3 { margin:0 0 8px;font-size:17px;color:#5b4f6b; }
+.spec-shell .spec-page.explorer-profile-page .profile-preference-grid p { margin:0;font-size:21px;line-height:1.45;color:#322642;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-student-note { margin:22px 0;padding:20px;background:#f4f0fc;border-radius:17px; }
+.spec-shell .spec-page.explorer-profile-page .profile-student-note h3 { font-size:18px;margin:0 0 9px; }
+.spec-shell .spec-page.explorer-profile-page .profile-student-note p { font-size:18px;line-height:1.65;margin:0;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary-actions { display:flex;gap:12px;flex-wrap:wrap;margin-top:24px; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary-actions .button { min-height:48px;font-size:17px; }
+.spec-shell .spec-page.explorer-profile-page .profile-open-options { display:flex;gap:15px;padding:22px;border:1px dashed #c8b7e6;border-radius:18px;background:#faf7ff; }
+.spec-shell .spec-page.explorer-profile-page .profile-open-options svg { flex-shrink:0;color:#6a44bd; }
+.spec-shell .spec-page.explorer-profile-page .profile-open-options h4 { margin:0 0 10px;font-size:21px; }
+.spec-shell .spec-page.explorer-profile-page .profile-open-options p { margin:0;font-size:18px;line-height:1.65; }
+.spec-shell .spec-page.explorer-profile-page .profile-support { font-size:15px;line-height:1.7;color:#665a73;margin:17px 0 0; }
+.spec-shell .spec-page.explorer-profile-page .profile-record-details { margin-top:22px;padding:18px;border:1px solid #ded6e9;border-radius:16px;background:#fff;overflow-wrap:anywhere; }
+.spec-shell .spec-page.explorer-profile-page .profile-record-details summary { cursor:pointer;font-size:16px;font-weight:650;color:#63439c;min-height:24px; }
+.spec-shell .spec-page.explorer-profile-page .profile-record-details dl { margin:18px 0;font-size:15px; }
+.spec-shell .spec-page.explorer-profile-page .profile-record-details dl>div { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0; }
+.spec-shell .spec-page.explorer-profile-page .profile-record-details dd { margin:0; }
+.spec-shell .spec-page.explorer-profile-page .profile-original-note { padding-top:12px;border-top:1px solid #ece5f4; }
+.spec-shell .spec-page.explorer-profile-page .profile-original-note h3 { font-size:17px; }
+.spec-shell .spec-page.explorer-profile-page .profile-original-note p { white-space:pre-wrap;font-size:16px;line-height:1.65; }
+.spec-shell .spec-page.explorer-profile-page .profile-status { font-size:16px!important; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary h2 { font-size:24px; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary>p, .spec-shell .spec-page.explorer-profile-page .profile-summary .clue strong { font-size:17px;line-height:1.6; }
+.spec-shell .spec-page.explorer-profile-page .profile-summary .clue small, .spec-shell .spec-page.explorer-profile-page .profile-summary .clue time, .spec-shell .spec-page.explorer-profile-page .profile-agency-note { font-size:15px;line-height:1.6; }
+.spec-shell .spec-page.explorer-profile-page .interest-picker button { min-height:44px;font-size:16px; }
+.spec-shell .spec-page.explorer-profile-page .add-interest input, .spec-shell .spec-page.explorer-profile-page .profile-manual-editor select, .spec-shell .spec-page.explorer-profile-page .profile-manual-editor textarea { font-size:18px; }
+.spec-shell .spec-page.explorer-profile-page .profile-manual-editor label, .spec-shell .spec-page.explorer-profile-page .unsure-choice { font-size:17px; }
+.spec-shell .spec-page.explorer-profile-page .profile-details dt { font-size:16px; }
+.spec-shell .spec-page.explorer-profile-page .profile-details dd { font-size:20px;line-height:1.6; }
+.spec-shell .spec-page.explorer-profile-page .profile-inline-interests { margin:24px 0; }
+.spec-shell .spec-page.explorer-profile-page .profile-inline-interests h3 { font-size:20px; }
+.spec-shell .spec-page.explorer-profile-page .profile-discovery-review .button { font-size:17px;min-height:46px; }
+.spec-shell .spec-page.explorer-profile-page .guide-feedback>fieldset>label { font-size:18px;min-height:44px; }
+@media(max-width:600px) {
+ .spec-shell .spec-page.explorer-profile-page .page-heading h1 { font-size:28px; }
+ .spec-shell .spec-page.explorer-profile-page .page-heading>p, .spec-shell .spec-page.explorer-profile-page .profile-review-status>p { font-size:17px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero { padding:24px;gap:14px;align-items:flex-start; }
+ .spec-shell .spec-page.explorer-profile-page .profile-compass-art { flex-basis:50px;height:50px;margin-top:7px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-compass-art>svg:first-child { width:38px;height:38px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-compass-art>svg:last-child { width:17px;height:17px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero h2 { font-size:25px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-curiosity-hero p, .spec-shell .spec-page.explorer-profile-page .profile-student-note p { font-size:17px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-summary-body { padding:22px; }
+ .spec-shell .spec-page.explorer-profile-page .profile-interest-grid { grid-template-columns:1fr; }
+ .spec-shell .spec-page.explorer-profile-page .profile-summary-actions { flex-direction:column; }
+ .spec-shell .spec-page.explorer-profile-page .profile-summary-actions .button { width:100%; }
+ .spec-shell .spec-page.explorer-profile-page .review-panel { padding:22px; }
+ .spec-shell .spec-page.explorer-profile-page .review-panel.confirmed-summary-panel { padding:0; }
+ .spec-shell .spec-page.explorer-profile-page .add-interest input { min-width:0;font-size:17px; }
+}

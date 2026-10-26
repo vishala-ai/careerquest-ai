@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "editing_profile_version": 2,
+  "confirmed": false,
+  "xp": 70,
+  "personalization_gates": {
+    "/explore": 409,
+    "/roadmap/propose": 409
+  },
+  "blocked_calls_left_state_unchanged": true,
+  "previous_confirmed_interests": [
+    "art"
+  ],
+  "old_handoff_preserved": true
+}

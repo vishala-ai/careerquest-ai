@@ -1,0 +1,48 @@
+{
+  "check": "LIVE Groq Somewhat revision; initial proposal seeded with deterministic mock",
+  "live_revision_requests": 1,
+  "status": "passed",
+  "model": "openai/gpt-oss-120b",
+  "generation_status": "groq",
+  "diagnostics": {
+    "reason": "validated",
+    "model_world_ids": [
+      "design"
+    ]
+  },
+  "recommendation_source": "groq",
+  "summary_words": 93,
+  "interest_clues": [
+    "technology",
+    "art"
+  ],
+  "world_ids": [
+    "design"
+  ],
+  "changes": {
+    "kept": [
+      "technology"
+    ],
+    "added": [
+      "art"
+    ],
+    "removed": [
+      "building",
+      "science"
+    ],
+    "worlds_added": [],
+    "worlds_removed": [
+      "bioengineering",
+      "software"
+    ],
+    "correction": "Keep technology, but I prefer to explore art instead of science.",
+    "mode": "Somewhat",
+    "previous_version": 1
+  },
+  "quest_answers_unchanged": true,
+  "total_xp": 60,
+  "confirmed": false,
+  "roadmap_gate": 409,
+  "proposal_versions": 2,
+  "database": "temporary fictional SQLite; normal database untouched"
+}

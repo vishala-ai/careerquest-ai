@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "all_preexisting_database_rows_unchanged": true,
+  "new_tables": [
+    "career_explorations",
+    "career_shortlist"
+  ],
+  "new_table_counts": {
+    "career_explorations": 0,
+    "career_shortlist": 0
+  },
+  "catalogue_worlds": 4,
+  "normal_backend_port": 8000,
+  "isolated_test_server_stopped": true
+}

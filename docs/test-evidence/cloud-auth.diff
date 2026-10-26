@@ -1,0 +1,1593 @@
+--- before/.replit
++++ after/.replit
+@@ -1,4 +1,4 @@
+-# Development preview only. Configure restricted preview access in Replit.
++# Authenticated alias-only demo. See docs/CLOUD_DEPLOYMENT.md before publishing.
+ entrypoint = "careerquest/api.py"
+ modules = ["python-3.12", "nodejs-22"]
+ run = "bash scripts/replit-setup.sh && bash scripts/replit-run.sh"
+@@ -7,6 +7,12 @@
+ CAREERQUEST_HOST = "0.0.0.0"
+ PORT = "8000"
+ GROQ_MODEL = "openai/gpt-oss-120b"
++CAREERQUEST_DEV_TOOLS = "0"
++
++[deployment]
++deploymentTarget = "autoscale"
++build = ["bash", "scripts/replit-setup.sh"]
++run = ["bash", "scripts/replit-production.sh"]
+ 
+ [[ports]]
+ localPort = 8000
+--- before/README.md
++++ after/README.md
+@@ -1,6 +1,8 @@
+ # CareerQuest AI — High School to College Adventure
+ 
+-Welcome now distinguishes fresh sessions, remembered browser explorers with no selection, and active Adventure Home. Welcome and Switch Explorer share avatar/nickname/explicit-grade/fictional-acknowledgment setup. `POST /api/profiles` now requires `alias`, integer `grade` (9–12), and `fictional_ack: true`; React also sends a UUID `creation_key`, whose durable SQLite receipt prevents duplicate profiles after retries. No setup XP or profile confirmation is awarded. Avatars and explorer associations remain browser-local demo metadata. See the [onboarding diff](docs/test-evidence/onboarding-refinement.diff), [verification results](docs/test-evidence/onboarding-verification.json), and [first-time screenshot](docs/test-evidence/onboarding-first-time-desktop.jpg).
++The React/FastAPI app now requires username/password login. Visitors register an alias-only demo account, create one Explorer, and resume their own persisted progress after signing in. Authentication uses Argon2id, server-side sessions, CSRF protection and server-side profile ownership, including PDF/legacy routes. Existing unassigned local profiles stay private; the host can assign credentials with `scripts/account_admin.py`. Account/profile creation grants no XP and never confirms interests.
++
++For a new Replit project, see [cloud deployment instructions](docs/CLOUD_DEPLOYMENT.md). Local SQLite is retained; published Replit deployments require persistent PostgreSQL and a configured HTTPS origin. The source-only import ZIP excludes local records and secrets. This remains a test-data-only educational demo; actual student data is outside this project’s scope.
+ 
+ Adventure Home now has portfolio-aware messaging and a brighter four-stage trail. The shared header has one four-item navigation menu; its duplicate progress strip is removed. Current saved portfolios show a completed trail with View My Portfolio, while older snapshots remain distinct and revisitable. See [focused Home/header verification, diff and screenshots](docs/HOME_HEADER_REFINEMENT_VERIFICATION.md).
+ 
+@@ -83,7 +85,7 @@
+ 
+ ## Privacy
+ 
+-Do not host publicly or collect personal student information. The demo stores plaintext fictional profiles in local SQLite and does not implement user authentication. For production, add verified identity, parental/school privacy reviews, consent and retention controls, moderation, accessibility, source freshness, and counselor review.
++Share the alias-only demo only after completing the cloud deployment checks. Do not collect real student information. Password login provides account isolation; it does not make this prototype a production student system. Streamlit remains a local fallback and must not be exposed as an unauthenticated public alternative.
+ 
+ ## Files
+ 
+@@ -106,7 +108,7 @@
+ 
+ ## New: Gamified React interface + FastAPI (Week 3)
+ 
+-The React frontend in `frontend/` now centers on a visual six-stop journey map, an explorer passport, a guided next step, and a human-readable activity timeline. A dedicated profile page creates fictional explorers with nicknames, grade selection, and browser-local avatars, and lets you switch between profiles remembered in that browser. FastAPI remains the adapter at `careerquest/api.py`. It retains the existing Python agent, synthetic career catalog, and Streamlit fallback. The new UI adds an explicit student **Review & Confirm My Explorer Profile** gate between the three quests and personalized research/planning. See `docs/REACT_REPLIT_SETUP.md` for setup, limitations, and Replit guidance.
++The React frontend in `frontend/` now centers on a visual six-stop journey map, an explorer passport, a guided next step, and a human-readable activity timeline. Explorer setup creates an account-owned demo profile with a nickname, grade selection and an avatar. Sign Out / Switch Account replaces the browser-only profile selector in the authenticated app. FastAPI remains the adapter at `careerquest/api.py`. It retains the existing Python agent, synthetic career catalog, and Streamlit fallback. The new UI adds an explicit student **Review & Confirm My Explorer Profile** gate between the three quests and personalized research/planning. See `docs/REACT_REPLIT_SETUP.md` for setup, limitations, and Replit guidance.
+ 
+ See [the UI redesign verification](docs/UI_REDESIGN.md) for the checked flows, screenshots, and current profile boundaries.
+ 
+@@ -138,7 +140,7 @@
+ per explorer/hour and thirty total/hour, including failed attempts. Cached reads
+ make no model request. An explicit retry creates another bounded attempt/version.
+ Feedback is capped at twenty changes per explorer/hour. These limits persist
+-across process restarts; this remains a local fictional demo without authentication.
++across process restarts; the API requires account ownership for access. Local SQLite remains supported.
+ 
+ For one explicitly labeled live check, using a temporary fictional database:
+ 
+--- before/careerquest/api.py
++++ after/careerquest/api.py
+@@ -1,9 +1,12 @@
+-"""Local synthetic demo API. No auth: never expose to real students."""
++"""Authenticated, alias-only educational demo API."""
+ import os,json
+ from contextlib import contextmanager
+ from fastapi import FastAPI,HTTPException,Request,Depends,Query
+ from fastapi.middleware.cors import CORSMiddleware
+ from fastapi.responses import Response
++from fastapi.responses import JSONResponse
++from fastapi.exceptions import RequestValidationError
++from starlette.concurrency import run_in_threadpool
+ from pydantic import BaseModel,Field,model_validator
+ from typing import Literal
+ from uuid import UUID
+@@ -13,6 +16,7 @@
+ from . import career_worlds
+ from . import career_milestones
+ from . import developer
++from . import auth
+ from .store import connect,create_profile,profile,events,add_event,latest_plan,save_plan
+ from .quests import QUESTS,QUEST_REWARD_XP
+ from .discovery import discovery_state
+@@ -29,10 +33,47 @@
+ DB=os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3')
+ app=FastAPI(title='CareerQuest AI Demo')
+ app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:5173','http://localhost:5173'],allow_methods=['GET','POST'],allow_headers=['*'])
++@app.on_event('startup')
++def startup():
++    auth.check_configuration()
++    with db():pass
++
++@app.exception_handler(RequestValidationError)
++async def validation_error(request, error):
++    # Pydantic errors otherwise echo submitted values, including passwords.
++    return JSONResponse(status_code=422,content={'detail':[{'loc':list(item['loc']),'msg':item['msg'],'type':item['type']} for item in error.errors()]})
++
++def authorize(request):
++    if not request.url.path.startswith('/api/'):return None
++    if request.url.path.startswith('/api/developer/'):
++        developer.require_local_developer(request)
++    with db() as c:return auth.authorize(c,request)
++
++@app.middleware('http')
++async def authentication(request, call_next):
++    try:
++        try:body_length=int(request.headers.get('content-length','0'))
++        except ValueError:raise HTTPException(400,'Invalid request length')
++        if body_length<0:raise HTTPException(400,'Invalid request length')
++        if body_length>65536:
++            raise HTTPException(413,'Request is too large')
++        request.state.account=await run_in_threadpool(authorize,request)
++        response=await call_next(request)
++    except HTTPException as error:
++        response=JSONResponse(status_code=error.status_code,content={'detail':error.detail},headers=error.headers)
++    response.headers['X-Content-Type-Options']='nosniff'
++    response.headers['X-Frame-Options']='DENY'
++    response.headers['Referrer-Policy']='same-origin'
++    response.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=()'
++    if request.url.path.startswith('/api/'):
++        response.headers['Cache-Control']='no-store'
++    if auth.public_origin():response.headers['Strict-Transport-Security']='max-age=31536000'
++    return response
+ @contextmanager
+ def db():
+     c=connect(DB)
+     try:
++        auth.initialize(c)
+         yield c
+     finally:
+         c.close()
+@@ -51,10 +92,36 @@
+     creation_key:UUID|None=None
+     @model_validator(mode='after')
+     def validate_setup(self):
+-        if self.fictional_ack is not True:raise ValueError('Confirm that this explorer uses fictional information only')
++        if self.fictional_ack is not True:raise ValueError('Confirm that this explorer uses aliases and test data only')
+         self.alias=self.alias.strip()
+-        if len(self.alias)<2:raise ValueError('Enter a fictional nickname of at least two characters')
++        if len(self.alias)<2:raise ValueError('Enter an explorer nickname of at least two characters')
+         return self
++class Credentials(BaseModel):
++    model_config={'extra':'forbid'}
++    username:str=Field(min_length=1,max_length=30)
++    password:str=Field(min_length=1,max_length=128)
++class Registration(Credentials):
++    demo_ack:bool=Field(strict=True)
++
++@app.get('/api/auth/session')
++def auth_session(request:Request):
++    auth.same_origin(request)
++    with db() as c:owner=auth.account(c,request,required=False)
++    if not owner:return {'authenticated':False}
++    return {'authenticated':True,'account':{key:owner[key] for key in ('id','username','profile_id')},'csrf_token':owner['csrf']}
++@app.post('/api/auth/register')
++def register(x:Registration,request:Request,response:Response):
++    with db() as c:
++        aid=auth.register(c,x.username,x.password,x.demo_ack,request)
++        return auth.start_session(c,aid,request,response)
++@app.post('/api/auth/login')
++def login(x:Credentials,request:Request,response:Response):
++    with db() as c:
++        aid=auth.login(c,x.username,x.password,request)
++        return auth.start_session(c,aid,request,response)
++@app.post('/api/auth/logout')
++def logout(request:Request,response:Response):
++    with db() as c:return auth.logout(c,request,response)
+ class Choice(BaseModel):
+     option:str
+     revise:bool=False
+@@ -114,7 +181,7 @@
+         if not self.preferred_interests and (self.verdict=='Not really' or not self.retained_interest_ids):raise ValueError('Choose a preferred interest or a clue to keep')
+         return self
+ @app.get('/api/health')
+-def health():return {'status':'ok','mode':'fictional_local_demo','agent_engine':ENGINE}
++def health():return {'status':'ok','mode':'alias_demo','agent_engine':ENGINE,'authentication':'required'}
+ @app.get('/api/quests')
+ def quests():return QUESTS
+ @app.get('/api/career-worlds')
+@@ -126,9 +193,9 @@
+     if not handoff:raise HTTPException(409,'Review and explicitly confirm your profile to create a Discovery handoff')
+     return {'handoff_id':handoff['id'],'handoff_version':handoff['version'],'profile_version':handoff['profile_version'],'career_worlds':handoff['career_worlds'],'all_worlds':discovery_handoff.catalogue(),'exploratory':handoff['exploratory']}
+ @app.post('/api/profiles')
+-def create(x:New):
+-    try:
+-        with db() as c:pid=create_profile(c,x.alias,x.grade,request_key=str(x.creation_key) if x.creation_key else None)
++def create(x:New,request:Request):
++    try:
++        with db() as c:pid=auth.create_owned_profile(c,request.state.account,x.alias,x.grade)
+     except ValueError as error:raise HTTPException(409,str(error))
+     return state(pid)
+ @app.get('/api/profiles/{pid}')
+@@ -276,7 +343,7 @@
+     with db() as c:return RUN(c,pid,'Reflection: '+x.message)
+ 
+ @app.get('/api/developer/access',dependencies=[Depends(developer.require_local_developer)])
+-def developer_access():return {'enabled':True,'mode':'explicit_local_development','identity_authentication':False,'agent_engine':ENGINE}
++def developer_access():return {'enabled':True,'mode':'explicit_local_development','identity_authentication':True,'agent_engine':ENGINE}
+ @app.get('/api/developer/profiles/{pid}/research-receipts',dependencies=[Depends(developer.require_local_developer)])
+ def research_receipts(pid:str,limit:int=Query(default=20,ge=1,le=50)):
+     return career_operation(pid,lambda c:{'receipts':developer.receipts(c,pid,limit)})
+@@ -300,3 +367,5 @@
+     return FileResponse(DIST/'index.html',headers={'Cache-Control':'no-store','X-Frame-Options':'DENY','X-Content-Type-Options':'nosniff'})
+ if DIST.is_dir():
+     app.mount('/',StaticFiles(directory=DIST,html=True),name='frontend')
++from .request_limits import BodyLimit
++app.add_middleware(BodyLimit)
+--- before/careerquest/auth.py
++++ after/careerquest/auth.py
+@@ -0,0 +1,194 @@
++"""Username/password accounts for the alias-only demo. No public profile claiming."""
++import hashlib
++import os
++import re
++import secrets
++import time
++import uuid
++import threading
++from urllib.parse import urlsplit
++
++from argon2 import PasswordHasher
++from argon2.exceptions import InvalidHashError, VerificationError
++from fastapi import HTTPException
++
++HASHER = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
++HASH_CAPACITY = threading.BoundedSemaphore(2)
++DUMMY_HASH = HASHER.hash(secrets.token_urlsafe(32))
++COOKIE = 'cq_session'
++SESSION_SECONDS = 12 * 60 * 60
++SCHEMA = '''
++CREATE TABLE IF NOT EXISTS auth_accounts(
++ id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL,
++ profile_id TEXT UNIQUE REFERENCES profiles(id), created_at REAL NOT NULL);
++CREATE TABLE IF NOT EXISTS auth_sessions(
++ token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES auth_accounts(id),
++ csrf TEXT NOT NULL, expires_at REAL NOT NULL);
++CREATE TABLE IF NOT EXISTS auth_attempts(
++ bucket TEXT NOT NULL, attempted_at REAL NOT NULL);
++CREATE INDEX IF NOT EXISTS auth_attempt_time ON auth_attempts(bucket,attempted_at);
++'''
++
++
++def initialize(c):
++    c.executescript(SCHEMA)
++
++
++def public_origin():
++    origin = os.getenv('CAREERQUEST_PUBLIC_ORIGIN', '').rstrip('/')
++    if not origin and os.getenv('CAREERQUEST_ENV','local')=='local' and os.getenv('REPLIT_DEV_DOMAIN'):
++        origin='https://'+os.environ['REPLIT_DEV_DOMAIN']
++    if origin:
++        parts = urlsplit(origin)
++        if parts.scheme != 'https' or not parts.netloc or parts.path or parts.query or parts.fragment or parts.username:
++            raise RuntimeError('CAREERQUEST_PUBLIC_ORIGIN must be an HTTPS origin without a path')
++    return origin
++
++
++def check_configuration():
++    origin = public_origin()
++    if os.getenv('CAREERQUEST_ENV', 'local') != 'local' and not origin:
++        raise RuntimeError('Set CAREERQUEST_PUBLIC_ORIGIN for shared/cloud deployments')
++    if os.getenv('REPLIT_DEPLOYMENT') == '1' or os.getenv('CAREERQUEST_ENV') == 'production':
++        if not os.getenv('DATABASE_URL', '').startswith(('postgres://', 'postgresql://')):
++            raise RuntimeError('Cloud publishing requires persistent PostgreSQL DATABASE_URL; local SQLite is preserved')
++
++
++def same_origin(request):
++    expected = public_origin()
++    if expected:
++        if request.headers.get('host', '').lower() != urlsplit(expected).netloc.lower():
++            raise HTTPException(400, 'Unexpected application host')
++    else:
++        host = request.url.hostname
++        if host not in ('localhost', '127.0.0.1', '::1', 'testserver'):
++            raise HTTPException(503, 'Configure the public HTTPS origin before sharing this app')
++        expected = str(request.base_url).rstrip('/')
++    origin = request.headers.get('origin')
++    if (origin and origin != expected) or request.headers.get('sec-fetch-site') == 'cross-site':
++        raise HTTPException(403, 'Use this application’s own login and forms')
++
++
++def digest(value):
++    return hashlib.sha256(value.encode()).hexdigest()
++
++
++def limit(c, bucket, maximum, window=900):
++    """Persist limits across restart; serialize updates across processes."""
++    current = time.time()
++    with c:
++        c.execute('BEGIN IMMEDIATE')
++        c.execute('DELETE FROM auth_attempts WHERE attempted_at<?', (current-86400,))
++        count = c.execute('SELECT COUNT(*) FROM auth_attempts WHERE bucket=? AND attempted_at>?', (bucket,current-window)).fetchone()[0]
++        if count >= maximum:
++            raise HTTPException(429, 'Too many attempts. Please try again later.', headers={'Retry-After':str(window)})
++        c.execute('INSERT INTO auth_attempts VALUES(?,?)', (bucket,current))
++
++
++def account(c, request, required=True):
++    token = request.cookies.get(COOKIE, '')
++    row = c.execute('SELECT a.*,s.csrf,s.expires_at FROM auth_sessions s JOIN auth_accounts a ON a.id=s.account_id WHERE s.token_hash=? AND s.expires_at>?', (digest(token),time.time())).fetchone() if token else None
++    if not row and required:
++        raise HTTPException(401, 'Please sign in to continue')
++    return dict(row) if row else None
++
++
++def authorize(c, request):
++    if not request.url.path.startswith('/api/'):
++        return None
++    public = ('/api/health','/api/quests','/api/career-worlds','/api/career-discovery-milestone','/api/auth/session','/api/auth/login','/api/auth/register')
++    if request.url.path in public and request.method == 'GET':
++        return None
++    same_origin(request)
++    if request.url.path in ('/api/auth/login','/api/auth/register'):
++        if request.headers.get('x-cq-request') != '1':
++            raise HTTPException(403, 'Submit the login form from this application')
++        return None
++    owner = account(c,request)
++    if request.method not in ('GET','HEAD','OPTIONS'):
++        if not secrets.compare_digest(request.headers.get('x-csrf-token',''),owner['csrf']):
++            raise HTTPException(403, 'Your form expired. Reload and try again')
++    match = re.search(r'/profiles/([^/]+)',request.url.path)
++    if match and owner['profile_id'] != match.group(1):
++        raise HTTPException(404, 'Explorer not found')
++    return owner
++
++
++def credentials(username, password):
++    username = username.strip().lower()
++    if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{2,29}',username):
++        raise HTTPException(422, 'Use a username of 3–30 letters, numbers, hyphens or underscores')
++    if not 15 <= len(password) <= 128:
++        raise HTTPException(422, 'Use a password or passphrase of 15–128 characters')
++    if password.lower() in {'passwordpassword','123456789012345','qwertyuiopasdfgh','careerquestdemo'}:
++        raise HTTPException(422, 'Choose a less predictable password or passphrase')
++    return username
++
++
++def register(c, username, password, demo_ack, request):
++    username = credentials(username,password)
++    if demo_ack is not True:
++        raise HTTPException(422, 'Confirm that you will use aliases and test data only')
++    peer = request.client.host if request.client else 'unknown'
++    limit(c,'register:'+digest(peer),10,3600)
++    limit(c,'register-global',100,3600)
++    with HASH_CAPACITY:encoded = HASHER.hash(password)
++    with c:
++        c.execute('BEGIN IMMEDIATE')
++        if c.execute('SELECT id FROM auth_accounts WHERE username=?',(username,)).fetchone():
++            raise HTTPException(409, 'That username is unavailable. Try another or sign in')
++        aid = str(uuid.uuid4())
++        c.execute('INSERT INTO auth_accounts VALUES(?,?,?,?,?)',(aid,username,encoded,None,time.time()))
++    return aid
++
++
++def login(c, username, password, request):
++    peer = request.client.host if request.client else 'unknown'
++    normalized = username.strip().lower()
++    # Do not trust forwarded IP headers; a proxy shares this conservative budget.
++    limit(c,'login-peer:'+digest(peer),60)
++    limit(c,'login-user:'+digest(normalized),10)
++    row = c.execute('SELECT * FROM auth_accounts WHERE username=?',(normalized,)).fetchone()
++    try:
++        with HASH_CAPACITY:valid = HASHER.verify(row['password_hash'] if row else DUMMY_HASH,password)
++    except (VerificationError,InvalidHashError):
++        valid = False
++    if not row or not valid:
++        raise HTTPException(401, 'Username or password is incorrect')
++    return row['id']
++
++
++def start_session(c, aid, request, response):
++    token = secrets.token_urlsafe(32)
++    csrf = secrets.token_urlsafe(32)
++    with c:
++        old = request.cookies.get(COOKIE)
++        if old:c.execute('DELETE FROM auth_sessions WHERE token_hash=?',(digest(old),))
++        c.execute('DELETE FROM auth_sessions WHERE expires_at<?',(time.time(),))
++        c.execute('INSERT INTO auth_sessions VALUES(?,?,?,?)',(digest(token),aid,csrf,time.time()+SESSION_SECONDS))
++    response.set_cookie(COOKIE,token,max_age=SESSION_SECONDS,httponly=True,secure=bool(public_origin()),samesite='strict',path='/')
++    row = c.execute('SELECT id,username,profile_id FROM auth_accounts WHERE id=?',(aid,)).fetchone()
++    return {'authenticated':True,'account':dict(row),'csrf_token':csrf}
++
++
++def logout(c, request, response):
++    with c:c.execute('DELETE FROM auth_sessions WHERE token_hash=?',(digest(request.cookies.get(COOKIE,'')),))
++    response.delete_cookie(COOKIE,path='/',httponly=True,secure=bool(public_origin()),samesite='strict')
++    return {'authenticated':False}
++
++
++def create_owned_profile(c, owner, alias, grade):
++    """Account identity is the creation receipt: retries cannot create a second Explorer."""
++    with c:
++        c.execute('BEGIN IMMEDIATE')
++        row = c.execute('SELECT profile_id FROM auth_accounts WHERE id=?',(owner['id'],)).fetchone()
++        if row['profile_id']:
++            from .store import profile
++            existing = profile(c,row['profile_id'])
++            if (existing['alias'],existing['grade']) != (alias,grade):
++                raise HTTPException(409, 'This account already has an Explorer. Sign out to create another account')
++            return row['profile_id']
++        pid = str(uuid.uuid4())
++        c.execute('INSERT INTO profiles VALUES(?,?,?,?,?)',(pid,alias,grade,'[]',0))
++        c.execute('UPDATE auth_accounts SET profile_id=? WHERE id=?',(pid,owner['id']))
++    return pid
+--- before/careerquest/portfolio_pdf.py
++++ after/careerquest/portfolio_pdf.py
+@@ -73,7 +73,7 @@
+     story += [Spacer(1,14),p('This is a map of possibilities, not a permanent decision. You can change direction anytime.','QuestText')]
+     def footer(canvas,doc):
+         canvas.saveState();canvas.setFont('QuestSans',8);canvas.setFillColor(colors.HexColor('#465c55'))
+-        canvas.drawString(54,30,f"CareerQuest AI | Fictional educational demo | Saved portfolio version {saved['version']}")
++        canvas.drawString(54,30,f"CareerQuest AI | Educational demo | Saved portfolio version {saved['version']}")
+         canvas.drawRightString(558,30,str(doc.page));canvas.restoreState()
+     doc=SimpleDocTemplate(buffer,pagesize=(612,792),rightMargin=54,leftMargin=54,topMargin=44,bottomMargin=52,title=f"CareerQuest Portfolio v{saved['version']}",author='CareerQuest AI',pageCompression=0)
+     doc.build(story,onFirstPage=footer,onLaterPages=footer)
+--- before/careerquest/postgres.py
++++ after/careerquest/postgres.py
+@@ -0,0 +1,91 @@
++"""Small PostgreSQL storage adapter for the existing bounded SQLite queries.
++
++Local SQLite remains the default. Cloud transactions serialize writes with a
++PostgreSQL advisory lock, preserving BEGIN IMMEDIATE/version allocation semantics.
++The appended rowid preserves insertion ordering without leaking into snapshots.
++"""
++import re
++import threading
++import hashlib
++
++import psycopg
++from psycopg.pq import TransactionStatus
++
++_initialized=set()
++_schema_lock=threading.Lock()
++WRITE_LOCK=781934650
++
++
++class Row(dict):
++    # sqlite3.Row iterates values but also exposes keys for dict(row).
++    def __iter__(self):return iter(self.values())
++    def __getitem__(self,key):
++        return tuple(self.values())[key] if isinstance(key,int) else super().__getitem__(key)
++
++
++class Cursor:
++    def __init__(self,cursor):self.cursor=cursor
++    def _row(self,row):
++        if row is None:return None
++        return Row((column.name,value) for column,value in zip(self.cursor.description,row) if column.name!='rowid')
++    def fetchone(self):return self._row(self.cursor.fetchone())
++    def fetchall(self):return [self._row(row) for row in self.cursor.fetchall()]
++    def __iter__(self):
++        for row in self.cursor:yield self._row(row)
++
++
++class Connection:
++    def __init__(self,url,schema=None):
++        self.raw=psycopg.connect(url,autocommit=True,connect_timeout=10,prepare_threshold=None)
++        if schema:self.raw.execute(psycopg.sql.SQL('SET search_path TO {}').format(psycopg.sql.Identifier(schema)))
++        self.key=hashlib.sha256((url+'|'+str(schema)).encode()).hexdigest()
++    @property
++    def in_transaction(self):return self.raw.info.transaction_status!=TransactionStatus.IDLE
++    def _begin(self):
++        self.raw.execute('BEGIN')
++        self.raw.execute('SELECT pg_advisory_xact_lock(%s)',(WRITE_LOCK,))
++    def execute(self,sql,parameters=()):
++        command=sql.strip()
++        if command=="SELECT name FROM sqlite_master WHERE type='table'":
++            command="SELECT tablename AS name FROM pg_tables WHERE schemaname=current_schema() ORDER BY tablename"
++        if command.upper()=='BEGIN IMMEDIATE':
++            if self.raw.info.transaction_status!=TransactionStatus.IDLE:raise RuntimeError('Transaction already started')
++            self._begin();return Cursor(self.raw.cursor())
++        if command.upper().startswith(('INSERT ','UPDATE ','DELETE ')) and self.raw.info.transaction_status==TransactionStatus.IDLE:self._begin()
++        ignore=command.upper().startswith('INSERT OR IGNORE ')
++        if ignore:command=re.sub(r'^INSERT OR IGNORE','INSERT',command,flags=re.I)+' ON CONFLICT DO NOTHING'
++        command=command.replace('? IS NULL','CAST(? AS TEXT) IS NULL').replace('?','%s')
++        return Cursor(self.raw.execute(command,parameters))
++    def executescript(self,script):
++        key=(self.key,hashlib.sha256(script.encode()).hexdigest())
++        with _schema_lock:
++            if key in _initialized:return
++            try:
++                self._begin()
++                for statement in script.split(';'):
++                    statement=statement.strip()
++                    if not statement:continue
++                    if statement.upper().startswith('CREATE TABLE'):
++                        statement=statement[:-1]+',rowid BIGSERIAL UNIQUE)'
++                        # SQLite REAL is binary64; PostgreSQL REAL is binary32,
++                        # which would round epoch seconds by up to a minute.
++                        statement=re.sub(r'\bREAL\b','DOUBLE PRECISION',statement)
++                    self.raw.execute(statement)
++                self.commit();_initialized.add(key)
++            except Exception:
++                self.rollback();raise
++    def commit(self):self.raw.commit()
++    def rollback(self):self.raw.rollback()
++    def close(self):self.raw.close()
++    def __enter__(self):return self
++    def __exit__(self,kind,value,traceback):
++        if kind:self.rollback()
++        else:self.commit()
++
++
++def connect(url,ddl,schema=None):
++    c=Connection(url,schema)
++    try:c.executescript(ddl)
++    except Exception:
++        c.close();raise
++    return c
+--- before/careerquest/request_limits.py
++++ after/careerquest/request_limits.py
+@@ -0,0 +1,27 @@
++"""Bound JSON request size, including chunked requests without Content-Length."""
++from starlette.responses import JSONResponse
++
++
++class BodyLimit:
++    def __init__(self,app,maximum=65536):self.app,self.maximum=app,maximum
++    async def __call__(self,scope,receive,send):
++        if scope['type']!='http' or scope['method'] in ('GET','HEAD','OPTIONS'):
++            return await self.app(scope,receive,send)
++        chunks=[];size=0
++        while True:
++            message=await receive()
++            if message['type']=='http.disconnect':return
++            body=message.get('body',b'');size+=len(body)
++            if size>self.maximum:
++                response=JSONResponse({'detail':'Request is too large'},status_code=413)
++                return await response(scope,receive,send)
++            chunks.append(body)
++            if not message.get('more_body',False):break
++        consumed=False
++        async def bounded_receive():
++            nonlocal consumed
++            if not consumed:
++                consumed=True
++                return {'type':'http.request','body':b''.join(chunks),'more_body':False}
++            return await receive()
++        return await self.app(scope,bounded_receive,send)
+--- before/careerquest/store.py
++++ after/careerquest/store.py
+@@ -1,12 +1,9 @@
+-"""SQLite demo storage, NOT authenticated or suitable for real minors' data."""
+-import sqlite3,json,uuid,datetime
++"""Demo storage: local SQLite, optional cloud PostgreSQL. API ownership is enforced separately."""
++import sqlite3,json,uuid,datetime,os
+ from pathlib import Path
+ DEFAULT_DB=Path('var/careerquest.sqlite3')
+ def now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
+-def connect(path=DEFAULT_DB):
+-    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+-    c=sqlite3.connect(path);c.row_factory=sqlite3.Row;c.execute('PRAGMA foreign_keys=ON')
+-    c.executescript('''CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,alias TEXT NOT NULL,grade INTEGER NOT NULL CHECK(grade BETWEEN 9 AND 12),interests TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0);
++SCHEMA='''CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,alias TEXT NOT NULL,grade INTEGER NOT NULL CHECK(grade BETWEEN 9 AND 12),interests TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0);
+     CREATE TABLE IF NOT EXISTS explorer_creation_receipts(request_key TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),request_payload TEXT NOT NULL);
+     CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL);
+     CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,version INTEGER NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version));
+@@ -25,7 +22,14 @@
+     CREATE TABLE IF NOT EXISTS career_shortlist(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),world_id TEXT NOT NULL,exploration_id TEXT NOT NULL REFERENCES career_explorations(id),created_at TEXT NOT NULL,UNIQUE(profile_id,world_id,exploration_id));
+     CREATE TABLE IF NOT EXISTS career_path_preferences(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version));
+     CREATE TABLE IF NOT EXISTS career_milestones(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),kind TEXT NOT NULL,source_id TEXT NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),payload TEXT NOT NULL,created_at TEXT NOT NULL,delivered_at TEXT,acknowledged_at TEXT,UNIQUE(profile_id,kind));
+-    CREATE TABLE IF NOT EXISTS career_portfolio_completions(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,path_preference_id TEXT NOT NULL REFERENCES career_path_preferences(id),signature TEXT NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version),UNIQUE(profile_id,signature));''');c.commit();return c
++    CREATE TABLE IF NOT EXISTS career_portfolio_completions(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,path_preference_id TEXT NOT NULL REFERENCES career_path_preferences(id),signature TEXT NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version),UNIQUE(profile_id,signature));'''
++def connect(path=DEFAULT_DB):
++    if os.getenv('DATABASE_URL'):
++        from .postgres import connect as postgres_connect
++        return postgres_connect(os.environ['DATABASE_URL'],SCHEMA)
++    path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
++    c=sqlite3.connect(path);c.row_factory=sqlite3.Row;c.execute('PRAGMA foreign_keys=ON')
++    c.executescript(SCHEMA);c.commit();return c
+ def create_profile(c,alias='Demo Explorer',grade=11,request_key=None):
+     if not 9<=int(grade)<=12:raise ValueError('Grade 9–12 only')
+     payload=json.dumps({'alias':alias,'grade':int(grade)},sort_keys=True)
+--- before/docs/CLOUD_DEPLOYMENT.md
++++ after/docs/CLOUD_DEPLOYMENT.md
+@@ -0,0 +1,71 @@
++# CareerQuest AI: new Replit project
++
++This release adds self-registration and username/password login for an alias-only external demo. It has not been published or verified on a live Replit deployment. Use test data only; no real student names, contact information or records.
++
++## Import and preview
++
++1. Import `exports/careerquest-replit.zip` into a new Replit project. Keep source access private. If ZIP import is unavailable in your account, create a Python project, upload the ZIP and extract its contents into the project root. Do not ask Replit Agent to rebuild the application.
++2. Select Run. `.replit` runs `bash scripts/replit-setup.sh` and `bash scripts/replit-run.sh`. Python 3.12+, Node 22, the existing React UI and FastAPI share port 8000.
++3. In preview, the server reads Replit’s server-provided `REPLIT_DEV_DOMAIN` for its HTTPS origin. Alternatively set `CAREERQUEST_PUBLIC_ORIGIN` explicitly to the exact preview origin. Do not trust a browser-supplied host or forwarded header to configure it.
++   Open that preview URL in its own browser tab for login. The app uses SameSite=Strict cookies; an embedded cross-site editor preview may block them. Do not weaken cookie protections to work around the embedded frame.
++4. Add the existing `GROQ_API_KEY` through Replit’s server-side Secrets interface, never chat/source/React variables. Keep `GROQ_MODEL=openai/gpt-oss-120b`. Without the key, existing labeled bounded fallbacks remain available.
++5. Register an alias and a passphrase of 15–128 characters. No email is collected. Create an Explorer, complete a quest, reload, sign out, sign in and confirm saved progress. Registration and Explorer creation award zero XP.
++
++## Persistent cloud storage and publishing
++
++Replit publishing uses a separate environment. Do not store published records in local SQLite. Provision Replit’s managed PostgreSQL database and confirm the production database is attached to the published app. See [Replit database guidance](https://docs.replit.com/build/add-database) and [publishing troubleshooting](https://docs.replit.com/build/troubleshooting).
++
++Set these in **production** settings, not just the editor:
++
++| Setting | Value |
++| --- | --- |
++| `DATABASE_URL` | Managed PostgreSQL connection supplied by Replit; keep private |
++| `CAREERQUEST_PUBLIC_ORIGIN` | Exact `https://your-project.replit.app` origin, no path; use the selected domain |
++| `GROQ_API_KEY` | Existing server-side Groq credential, if live generation is desired |
++| `GROQ_MODEL` | `openai/gpt-oss-120b` |
++
++Production build: `bash scripts/replit-setup.sh`.
++
++Production run: `bash scripts/replit-production.sh`.
++
++The production launcher forces `CAREERQUEST_ENV=production`, `CAREERQUEST_DEV_TOOLS=0` and `CAREERQUEST_HOST=0.0.0.0`. Startup fails without persistent PostgreSQL and a valid HTTPS origin. Secure, HttpOnly, SameSite=Strict cookies are enabled for HTTPS. Uvicorn does not trust arbitrary forwarded headers. Use a TLS-verified PostgreSQL connection as supplied by the provider; never disable certificate verification to make a failed connection work.
++
++Review Replit’s displayed hosting/database costs before publishing. This package does not purchase a plan or publish an application. After publishing, repeat login/quest/reload checks on the public URL, restart/redeploy and verify records still exist. Check database backups in the provider before inviting a group.
++
++## Account boundaries and existing records
++
++- Each account owns at most one Explorer. A username and account-bound creation transaction prevent duplicate Explorers after retries; browser-local IDs are no longer authority.
++- Every profile API, saved PDF and legacy research/roadmap route checks server-side ownership. Another account’s IDs return 404. A global profile directory is not exposed.
++- Existing local records stay on this computer and are excluded from the import ZIP. They are not deleted, automatically claimed or migrated. A fresh Replit database starts empty. Transferring existing histories is a separate, explicit migration; copying a SQLite file into a published filesystem is not a durable migration.
++- To give an existing **local demo profile** a login, run the host-only CLI below. It prompts privately for a passphrase and refuses an already owned profile. It changes only account ownership, not profile history, confirmations or XP.
++
++```sh
++.venv/bin/python scripts/account_admin.py assign --username demo_alias --profile-id PROFILE_UUID
++.venv/bin/python scripts/account_admin.py reset --username demo_alias
++```
++
++On Replit, use `.venv-replit/bin/python` instead. Password reset revokes that account’s sessions. There is no public reset endpoint or email recovery; the demo host must perform resets. Never put passwords in shell arguments. Old unassigned records cannot be claimed by a public signup.
++
++Session duration is 12 hours. Auth attempts are rate-limited in the database: 10 registrations per observed peer and 100 overall per hour; 10 login attempts per username and 60 per observed peer per 15 minutes. Forwarded IP headers are not trusted. A reverse proxy may share the peer budget across visitors; plan a group demo accordingly. Password hashing concurrency is bounded to two operations per application process.
++
++## Storage adapter and verification
++
++Local SQLite and Streamlit code remain available. `DATABASE_URL` selects the PostgreSQL adapter for the same tables and SQL operations. An appended database-generated row ID preserves insertion order; PostgreSQL advisory transaction locks preserve the existing serialized write/version-allocation behavior. Existing domain APIs, source validation, confirmation gates and immutable portfolio snapshots are retained. Do not publish the unauthenticated Streamlit fallback.
++
++```sh
++python -m unittest discover -s tests -v
++python -m compileall -q careerquest app.py tests scripts
++npm --prefix frontend test
++npm --prefix frontend run build
++python scripts/package_replit.py
++```
++
++For **a separate native PostgreSQL test database**, configure `CAREERQUEST_TEST_DATABASE_URL` privately and run:
++
++```sh
++python scripts/verify_postgres.py
++```
++
++The runner creates isolated randomly named `cq_test_*` schemas, runs the same backend assertions and removes only those schemas. Do not point test tooling at the production database. `--pglite` skips two concurrency checks because PGlite multiplexes one connection; it is a local SQL compatibility check, not a substitute for native PostgreSQL concurrency verification. Live Replit storage, proxy/cookie behavior, production scaling and native PostgreSQL concurrency still require checks in the new project.
++
++Model routing and generation tests use mocks; cloud authentication work does not constitute a new live Groq smoke test. UI wording uses “demo,” “Explorer” and “test data.” Raw history and curated source content are not rewritten to remove historical wording.
+--- before/frontend/src/App.jsx
++++ after/frontend/src/App.jsx
+@@ -1,12 +1,12 @@
+ import React, {useEffect, useRef, useState} from 'react';
+ import {ArrowRight, ArrowUpRight, Check, ChevronDown, Compass, Sparkles, Map, Globe2, UserRound, Plus, Flag, BookOpen, ShieldCheck, Zap, Code2, FlaskConical, Palette, HeartHandshake, X, RefreshCw} from 'lucide-react';
+ import {api} from './api';
+-import {profileForm, readExplorers, rememberExplorer} from './journey';
++import {profileForm} from './journey';
+ import AppShell from './components/AppShell';
+ import {studentExperience} from './studentExperience';
+ import Welcome from './pages/Welcome';
+ import ExplorerSelection from './components/ExplorerSelection';
+-import {availableExplorers,creationRequest,finishCreation,leaveExplorer} from './explorerSetup';
++import {creationRequest,finishCreation,leaveExplorer} from './explorerSetup';
+ import DiscoveryQuests from './pages/DiscoveryQuests';
+ import ExplorerProfile from './pages/ExplorerProfile';
+ import UnsavedChanges from './components/UnsavedChanges';
+@@ -14,8 +14,8 @@
+ import {Button, PageHeading, Gate, Sources, ActivityTimeline} from './components/Shared';
+ 
+ 
+-export default function App() {
+-  const [pid, setPid] = useState(localStorage.getItem('cq_pid') || '');
++export default function App({account,onLogout}) {
++  const [pid, setPid] = useState(account?.profile_id || '');
+   const activeExplorer=useRef(pid);activeExplorer.current=pid;
+   const [state, setState] = useState(null);
+   const [createdProfileId,setCreatedProfileId]=useState('');
+@@ -32,7 +32,7 @@
+   const [error, setError] = useState('');
+   const [entryError,setEntryError]=useState(false);
+   const [notice, setNotice] = useState('');
+-  const [explorers, setExplorers] = useState(readExplorers);
++  const [explorers, setExplorers] = useState([]);
+   const [explorerView,setExplorerView]=useState('switch');
+   const [profileValues,setProfileValues]=useState(()=>profileForm(null));
+   const [questDirty,setQuestDirty]=useState(false);
+@@ -46,10 +46,10 @@
+   const [fail, setFail] = useState(false);
+ 
+   const profileDirty=page==='confirm' && state && !state.confirmed && (interestPending || JSON.stringify(profileValues)!==JSON.stringify(profileForm(state)));
+-  const route=next=>{if(['worlds','portfolio','celebrate'].includes(next)){setWorldsEntry(value=>value+1);setCareerEntry(next==='celebrate'?'milestone':next==='portfolio'?'auto':'worlds');setCareerScreen(next==='worlds'?'worlds':next==='celebrate'?'milestone':'portfolio');}if(next==='profiles')setExplorerView('switch');setPage(next==='celebrate'?'portfolio':next);setError('');setNotice('');window.scrollTo({top:0,behavior:'instant'});};
++  const route=next=>{if(next==='profiles'){onLogout();return;}if(['worlds','portfolio','celebrate'].includes(next)){setWorldsEntry(value=>value+1);setCareerEntry(next==='celebrate'?'milestone':next==='portfolio'?'auto':'worlds');setCareerScreen(next==='worlds'?'worlds':next==='celebrate'?'milestone':'portfolio');}if(next==='profiles')setExplorerView('switch');setPage(next==='celebrate'?'portfolio':next);setError('');setNotice('');window.scrollTo({top:0,behavior:'instant'});};
+   const navigate=next=>{if(busy)return;if(next!==page && (profileDirty||questDirty)){setPendingNav(next);return;}route(next);};
+   const hydrate=data=>setProfileValues(profileForm(data));
+-  const apply = (data, icon) => {activeExplorer.current=data.profile.id;setState(data); setPid(data.profile.id); const saved=rememberExplorer(data,icon).find(item=>item.id===data.profile.id);setExplorers(current=>[saved,...current.filter(item=>item.id!==saved.id)]);};
++  const apply = (data, icon) => {activeExplorer.current=data.profile.id;setState(data);setPid(data.profile.id);setExplorers(current=>[{id:data.profile.id,alias:data.profile.alias,grade:data.profile.grade,avatar:icon||current.find(item=>item.id===data.profile.id)?.avatar||'🧭'}]);};
+   async function action(fn) {
+     setBusy(true); setError(''); setNotice('');
+     try {return await fn();} catch (err) {setError(err.message);return null;} finally {setBusy(false);}
+@@ -58,7 +58,6 @@
+     setLoading(true); setError('');setEntryError(false);
+     try {
+       setQuests(await api('/quests'));
+-      setExplorers(await availableExplorers(readExplorers(),id=>api(`/profiles/${encodeURIComponent(id)}`)));
+       if (pid) {
+         try {const saved = await api(`/profiles/${pid}`); apply(saved); hydrate(saved); setResult(saved.last_research);}
+         catch (err) {
+@@ -153,8 +152,8 @@
+   const experience=studentExperience(state,career,quests.length||3);
+   const currentAvatar=explorers.find(item=>item.id===pid)?.avatar || '🧭';
+ 
+-  return <AppShell page={page} state={state} career={career} careerScreen={careerScreen} progressLoading={careerLoading} avatar={currentAvatar} onNavigate={go} busy={busy}><main id="main" className={`main-content ${page==='welcome'?'is-welcome':''}`} aria-busy={busy || loading}>
+-    <div className="demo-banner"><ShieldCheck size={14}/><span>Fictional explorers only · A local educational demo</span><span className="banner-note">Explore possibilities. Keep your options open.</span></div>
++  return <AppShell page={page} state={state} career={career} careerScreen={careerScreen} progressLoading={careerLoading} avatar={currentAvatar} account={account} onLogout={()=>navigate('profiles')} onNavigate={go} busy={busy}><main id="main" className={`main-content ${page==='welcome'?'is-welcome':''}`} aria-busy={busy || loading}>
++    <div className="demo-banner"><ShieldCheck size={14}/><span>Educational demo · Use aliases and test data only</span><span className="banner-note">Explore possibilities. Keep your options open.</span></div>
+     {error && (page!=='welcome'||!entryError) && <div className="alert error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error"><X size={17}/></button>{!state && <button onClick={load}>Try again</button>}</div>}
+     {notice && <div className="alert notice" role="status"><Check size={17}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={17}/></button></div>}
+     {loading && page!=='welcome' ? <div className="loading"><Compass className="spin" size={32}/><p>Finding your place on the map…</p></div> : <>
+@@ -171,8 +170,8 @@
+     {page === 'roadmap' && <><PageHeading eyebrow="STOP 05 · PLAN" title="Small steps. Open possibilities.">A flexible exploration plan for Grade {state?.profile.grade || '9–12'}. Review it, make it yours, and come back as you grow.</PageHeading>{!state?.confirmed ? <Gate state={state} onNavigate={go}/> : <div className="roadmap-layout"><div><section className="panel roadmap-panel"><div className="panel-title"><span className="icon-block blue"><Map size={23}/></span><div><h2>{state.latest_plan ? 'Your saved roadmap' : 'Your next steps start here'}</h2><p>{state.latest_plan ? `Version ${state.latest_plan.version} · Saved for your explorer` : 'Generate a proposal, then review it before saving.'}</p></div></div>{state.latest_plan ? <><ol className="roadmap-activities">{state.latest_plan.content.activities.map((activity, index) => <li key={index}><span>{String(index + 1).padStart(2, '0')}</span><div><small>EXPLORATION ACTIVITY</small><p>{activity}</p></div></li>)}</ol><p className="small-note">{state.latest_plan.content.note}</p><details className="guide-options"><summary>Sources behind this roadmap</summary><Sources sources={state.latest_plan.content.sources}/></details></> : <div className="roadmap-empty"><Map size={65} strokeWidth={1}/><p>You don’t need the whole future figured out.<br/>Just a few things you’re curious to try.</p></div>}<Button busy={busy} onClick={propose} className={state.latest_plan ? 'secondary' : ''}>{state.latest_plan ? <RefreshCw size={16}/> : <Sparkles size={16}/>} {state.latest_plan ? 'Create a revised proposal' : 'Create my first roadmap'}</Button></section>
+       {proposal?.plan && <section id="roadmap-proposal" className="panel proposal-panel" aria-live="polite"><span className="eyebrow">PROPOSED · NOT SAVED YET</span><h2>Does this feel like a good next step?</h2><p className="muted">{state.latest_plan ? "Your saved roadmap stays as it is until you confirm this proposal." : "Review these activities. Your first roadmap is saved only when you confirm."}</p><ol className="roadmap-activities">{proposal.plan.activities.map((activity, index) => <li key={index}><span>{index + 1}</span><p>{activity}</p></li>)}</ol><div className="button-row"><Button busy={busy} onClick={save}>Confirm & save roadmap <Check size={17}/></Button><Button className="ghost" disabled={busy} onClick={() => setProposal(null)}>{state.latest_plan ? "Keep my current plan" : "Discard proposal"}</Button></div></section>}</div><aside><section className="panel plan-next"><span className="icon-block peach"><BookOpen size={25}/></span><span className="eyebrow">THE NEXT STOP</span><h2>A little reflection<br/>goes a long way.</h2><p>What did you enjoy? What surprised you? Your answer can help shape your next adventure.</p><Button className="secondary" onClick={() => navigate('reflect')}>Reflect & adapt <ArrowRight size={16}/></Button></section><div className="gentle-note"><Flag size={23}/><p>This is a map,<br/><strong>not a requirement.</strong></p><span>Verify school requirements and deadlines with official sources and a counselor.</span></div></aside></div>}</>}
+ 
+-    {page === 'reflect' && <><PageHeading eyebrow="STOP 06 · REFLECT & REPEAT" title="What did you discover about you?">A small reflection can open a new direction. There’s always room to change your mind.</PageHeading>{!state?.confirmed ? <Gate state={state} onNavigate={go}/> : <div className="reflection-layout"><section className="panel reflection-panel"><span className="icon-block peach"><BookOpen size={30}/></span><h2>Leave a note for your future self.</h2><div className="reflection-prompts"><span>What felt interesting?</span><span>What would you try again?</span><span>What wasn’t for you?</span></div><label htmlFor="reflection">My reflection <small>Fictional demo information only</small></label><textarea id="reflection" rows={5} value={reflection} maxLength={800} onChange={event => setReflection(event.target.value)} placeholder="I enjoyed building a mini-app. Next, I’d like to try designing an interface…"/><Button busy={busy} disabled={reflection.trim().length < 3} onClick={reflect}>Save reflection <span className="button-xp">+10 XP</span><ArrowRight size={17}/></Button></section><aside className="panel reflection-aside"><Compass size={42} strokeWidth={1.1}/><h2>A new interest?<br/>Make room for it.</h2><p>You’re not starting over. You’re adding to your story.</p><Button className="secondary" onClick={openProfile}>Revisit my interests <ArrowUpRight size={16}/></Button>{state.reflection_count > 0 && <p className="small-note">{state.reflection_count} reflection{state.reflection_count === 1 ? '' : 's'} saved in your journey.</p>}</aside></div>}</>}
++    {page === 'reflect' && <><PageHeading eyebrow="STOP 06 · REFLECT & REPEAT" title="What did you discover about you?">A small reflection can open a new direction. There’s always room to change your mind.</PageHeading>{!state?.confirmed ? <Gate state={state} onNavigate={go}/> : <div className="reflection-layout"><section className="panel reflection-panel"><span className="icon-block peach"><BookOpen size={30}/></span><h2>Leave a note for your future self.</h2><div className="reflection-prompts"><span>What felt interesting?</span><span>What would you try again?</span><span>What wasn’t for you?</span></div><label htmlFor="reflection">My reflection <small>Demo information only</small></label><textarea id="reflection" rows={5} value={reflection} maxLength={800} onChange={event => setReflection(event.target.value)} placeholder="I enjoyed building a mini-app. Next, I’d like to try designing an interface…"/><Button busy={busy} disabled={reflection.trim().length < 3} onClick={reflect}>Save reflection <span className="button-xp">+10 XP</span><ArrowRight size={17}/></Button></section><aside className="panel reflection-aside"><Compass size={42} strokeWidth={1.1}/><h2>A new interest?<br/>Make room for it.</h2><p>You’re not starting over. You’re adding to your story.</p><Button className="secondary" onClick={openProfile}>Revisit my interests <ArrowUpRight size={16}/></Button>{state.reflection_count > 0 && <p className="small-note">{state.reflection_count} reflection{state.reflection_count === 1 ? '' : 's'} saved in your journey.</p>}</aside></div>}</>}
+     </>}
+-    <footer><span><Compass size={14}/> CareerQuest AI</span><span>Fictional profiles · Offline sources · No admissions predictions</span><button onClick={() => navigate('profiles')}>Manage explorers <ArrowUpRight size={13}/></button></footer>
++    <footer><span><Compass size={14}/> CareerQuest AI</span><span>Demo profiles · Offline sources · No admissions predictions</span><button onClick={() => navigate('profiles')}>Sign Out / Switch Account <ArrowUpRight size={13}/></button></footer>
+   </main>{pendingNav&&<UnsavedChanges profileDirty={profileDirty} busy={busy} error={error} onStay={()=>setPendingNav(null)} onDiscard={()=>{hydrate(state);setPendingNav(null);route(pendingNav);}} onSave={()=>action(async()=>{await persistDraft();const target=pendingNav;setPendingNav(null);route(target);setNotice('Your draft was saved before leaving.');})}/>}</AppShell>;
+ }
+--- before/frontend/src/adventureHome.js
++++ after/frontend/src/adventureHome.js
+@@ -8,7 +8,7 @@
+   const planned = Boolean(state?.latest_plan);
+   const updated = !confirmed && Boolean(state?.profile_preferences || state?.confirmation_version);
+   let mission;
+-  if (!state) mission = {id:'profiles', label:'Create My Explorer', title:'Meet your explorer', description:'Choose a fictional nickname and grade. Your adventure starts with curiosity.'};
++  if (!state) mission = {id:'profiles', label:'Create My Explorer', title:'Meet your explorer', description:'Choose a explorer nickname and grade. Your adventure starts with curiosity.'};
+   else if (!complete) mission = {id:'quests', label:'Continue Quests', title:`Your next clue: Quest ${count + 1}`, description:`${count} of ${questTotal} quests complete. Pick up at the first unfinished quest. There are no right or wrong answers.`, questIndex:count};
+   else if (!confirmed) mission = {id:'confirm', label:updated?'Review Updated Profile':'Review My Profile', title:updated?'Make your new direction yours':'Your clues. Your say.', description:'Review your interests and confirm what feels right before personalized exploration or planning.'};
+   else if (planned) mission = {id:'journey', label:'My Journey', title:'Pause, reflect, keep growing', description:'Your roadmap is saved. Revisit your progress and reflect on what you would like to try.'};
+@@ -16,7 +16,7 @@
+   else mission = {id:'roadmap', label:'Build My Roadmap', title:'Turn curiosity into a small step', description:'Create a proposal, review the suggested activities, and decide whether to save it.'};
+ 
+   const stages = [
+-    {id:'profiles', title:'Meet your explorer', description:'A fictional nickname and a fresh start.', done:Boolean(state), available:true},
++    {id:'profiles', title:'Meet your explorer', description:'A explorer nickname and a fresh start.', done:Boolean(state), available:true},
+     {id:'quests', title:'Discover your spark', description:`${count} of ${questTotal} quests complete.`, done:complete, available:Boolean(state)},
+     {id:'confirm', title:'Make it your own', description:confirmed?'Your Explorer Profile is confirmed.':updated?'Review and confirm your updated clues.':'Review your clues. You decide what fits.', done:confirmed, available:complete},
+     {id:'worlds', title:'Explore career worlds', description:explored?'Exploration notes saved in your journey.':'Get curious about a few possibilities.', done:explored, available:confirmed},
+--- before/frontend/src/api.js
++++ after/frontend/src/api.js
+@@ -1,10 +1,16 @@
++let csrfToken='';
++export function setCsrfToken(value){csrfToken=value||'';}
+ export async function api(path, method = 'GET', body) {
+-  const response = await fetch(`/api${path}`, {method, headers: {'Content-Type': 'application/json'}, body: body === undefined ? undefined : JSON.stringify(body)});
+-  const data = await response.json();
++  const response = await fetch(`/api${path}`, {method, credentials:'same-origin', headers: {'Content-Type': 'application/json','X-CQ-Request':'1',...(method!=='GET'?{'X-CSRF-Token':csrfToken}:{})}, body: body === undefined ? undefined : JSON.stringify(body)});
++  let data;
++  try{data=await response.json();}catch{
++    const error=new Error('The service is unavailable. Please try again.');error.status=response.status;throw error;
++  }
+   if (!response.ok) {
+     const detail = Array.isArray(data.detail) ? data.detail.map(item => item.msg).join('. ') : data.detail;
+     const error = new Error(detail || 'Something went wrong. Please try again.');
+     error.status = response.status;
++    if(response.status===401&&!path.startsWith('/auth/'))window.dispatchEvent(new Event('cq-session-expired'));
+     throw error;
+   }
+   return data;
+--- before/frontend/src/components/AppShell.jsx
++++ after/frontend/src/components/AppShell.jsx
+@@ -6,7 +6,7 @@
+ import {studentExperience,primaryDestination} from '../studentExperience';
+ export {PRIMARY_PAGES};
+ 
+-export default function AppShell({page,state,career,careerScreen='worlds',avatar,onNavigate,children,busy=false}) {
++export default function AppShell({page,state,career,careerScreen='worlds',avatar,account,onLogout,onNavigate,children,busy=false}) {
+  const experience=studentExperience(state,career),shell=useRef(null),header=useRef(null);
+  useEffect(()=>{
+   const measure=()=>shell.current?.style.setProperty('--header-offset',`${Math.ceil(header.current?.getBoundingClientRect().height||0)+16}px`);
+@@ -15,5 +15,5 @@
+   window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);
+  },[]);
+  const accent=page==='confirm'?'confirm':page==='quests'?'discover':['worlds','portfolio'].includes(page)?careerScreen==='worlds'?'explore':'celebrate':'home';
+- return <div ref={shell} className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header ref={header} className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button>{state&&<><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></>}</div>{state&&<Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/>} {experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
++ return <div ref={shell} className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header ref={header} className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button>{state&&<><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onLogout={onLogout} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></>}{!state&&account&&<div className="account-header"><span>{account.username}</span><button className="account-signout" disabled={busy} onClick={onLogout}>Sign Out</button></div>}</div>{state&&<Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/>} {experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
+ }
+--- before/frontend/src/components/AuthGate.jsx
++++ after/frontend/src/components/AuthGate.jsx
+@@ -0,0 +1,28 @@
++import React,{useEffect,useRef,useState} from 'react';
++import {Compass,LockKeyhole,ArrowRight} from 'lucide-react';
++import {api,setCsrfToken} from '../api';
++import './auth.css';
++
++export default function AuthGate({children}){
++ const [session,setSession]=useState(null),[loading,setLoading]=useState(true),[error,setError]=useState(''),[mode,setMode]=useState('login'),[busy,setBusy]=useState(false);
++ const [username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[ack,setAck]=useState(false),pending=useRef(false);
++ const adopt=value=>{setCsrfToken(value.csrf_token);setSession(value.authenticated?value:null);};
++ const load=async()=>{setLoading(true);setError('');try{adopt(await api('/auth/session'));}catch(err){setError(err.message);}finally{setLoading(false);}};
++ useEffect(()=>{load();const expired=()=>{adopt({authenticated:false});setError('Your session ended. Sign in to continue your saved adventure.');};window.addEventListener('cq-session-expired',expired);return()=>window.removeEventListener('cq-session-expired',expired);},[]);
++ const register=mode==='register';
++ const valid=/^[a-zA-Z0-9][a-zA-Z0-9_-]{2,29}$/.test(username.trim())&&password.length>0&&(!register||(password.length>=15&&password===confirm&&ack));
++ async function submit(event){
++  event.preventDefault();if(pending.current||!valid)return;pending.current=true;setBusy(true);setError('');
++  try{adopt(await api(`/auth/${register?'register':'login'}`,'POST',{username:username.trim(),password,...(register?{demo_ack:ack}:{})}));setPassword('');setConfirm('');}
++  catch(err){setError(err.message);}finally{pending.current=false;setBusy(false);}
++ }
++ async function logout(){if(pending.current)return;pending.current=true;setBusy(true);try{await api('/auth/logout','POST',{});adopt({authenticated:false});setUsername('');setMode('login');setError('');}catch(err){if(err.status===401)adopt({authenticated:false});else setError(err.message);}finally{pending.current=false;setBusy(false);}}
++ if(session)return <>{error&&<div className="auth-session-error" role="alert">{error}<button onClick={logout} disabled={busy}>Retry sign out</button></div>}{children(session.account,logout)}</>;
++ return <div className="auth-page"><header><Compass size={30} aria-hidden="true"/><strong>CareerQuest <span>AI</span></strong></header><main id="main" className="auth-layout"><section className="auth-intro"><span className="welcome-eyebrow">YOUR ADVENTURE STARTS WITH CURIOSITY</span><h1>Your next chapter is yours to explore.</h1><p>Discover your interests, explore career possibilities and create a personal map. You don’t need your future figured out.</p><Compass className="auth-compass" size={138} strokeWidth={1.2} aria-hidden="true"/><p className="auth-demo-note">Educational demo · Grades 9–12<br/>Use aliases and test data only. Don’t enter real student information.</p></section><section className="auth-card" aria-labelledby="auth-title">
++ {loading?<p role="status">Checking your saved session…</p>:<><LockKeyhole size={28} aria-hidden="true"/><h2 id="auth-title">{register?'Start your adventure':'Welcome back'}</h2><p>{register?'Create a login to keep your Explorer and discoveries together.':'Sign in to continue your saved adventure.'}</p>
++ {error&&<p className="auth-error" role="alert">{error}</p>}
++ <form onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">{register?'Create account':'Sign in'}</legend><label htmlFor="auth-username">Username</label><input id="auth-username" name="username" value={username} onChange={e=>setUsername(e.target.value)} autoComplete="username" required minLength={3} maxLength={30} aria-describedby="username-help"/><small id="username-help">3–30 letters, numbers, hyphens or underscores. Use an alias, not your real name.</small><label htmlFor="auth-password">Password</label><input id="auth-password" name="password" type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={register?'new-password':'current-password'} required maxLength={128} minLength={register?15:1} aria-describedby={register?'password-help':undefined}/>{register&&<><small id="password-help">Use a passphrase of 15–128 characters. Keep it somewhere safe.</small><label htmlFor="auth-confirm">Confirm password</label><input id="auth-confirm" type="password" value={confirm} onChange={e=>setConfirm(e.target.value)} autoComplete="new-password" required maxLength={128}/>{confirm&&confirm!==password&&<span role="status">Passwords must match.</span>}<label className="auth-ack"><input type="checkbox" checked={ack} onChange={e=>setAck(e.target.checked)} required/><span>I’ll use aliases and test data only. I won’t enter real student information.</span></label></>}
++ <button className="auth-primary" type="submit" disabled={!valid||busy}>{busy?'Please wait…':register?'Create My Account':'Sign In'}<ArrowRight size={20} aria-hidden="true"/></button></fieldset></form>
++ <button className="auth-switch" disabled={busy} onClick={()=>{setMode(register?'login':'register');setError('');setPassword('');setConfirm('');setAck(false);}}>{register?'Already have an account? Sign in':'New here? Create an account'}</button><button className="auth-retry" onClick={load} disabled={busy}>Retry connection</button><p className="auth-help">No email address is collected. If you forget your password, ask the demo host for a reset.</p></>}
++ </section></main></div>;
++}
+--- before/frontend/src/components/DiscoveryAgentPanel.jsx
++++ after/frontend/src/components/DiscoveryAgentPanel.jsx
+@@ -27,7 +27,7 @@
+   {readOnly&&agent.question&&<p role="status">Your guide has a saved question. Continue to Explorer Profile to answer it.</p>}
+   {agent.fallback_used&&<p className="guide-source-label" role="status">Some agent steps used a bounded fallback or stopped safely. Discovery Agent Activity identifies which decisions came from Groq.</p>}
+   {agent.engine==='bounded_service_fallback'&&<p role="status">LangGraph is unavailable. The bounded service fallback is running.</p>}
+-  {agent.is_stale?<p role="status">The previous agent session is archived because your saved answers or profile changed.</p>:question?<section className="guide-agent-question" aria-label="Discovery Agent question"><h3>A quick question before we continue</h3><p>{question.text}</p><form onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">Answer the saved discovery question</legend>{question.id==='correction'?<><label htmlFor="agent-correction">My correction · fictional information only</label><textarea id="agent-correction" value={correction} onChange={e=>setCorrection(e.target.value)} required minLength={3} maxLength={500} rows={3}/></>:<><div className="guide-interest-picker">{[...new Set([...question.options,...selected])].map(value=><button key={value} type="button" aria-pressed={selected.includes(value)} disabled={!selected.includes(value)&&selected.length>=3} onClick={()=>toggle(value)}>{value}</button>)}</div><label htmlFor="agent-interest">Add a preferred interest</label><div className="guide-custom-interest"><input id="agent-interest" value={custom} onChange={e=>setCustom(e.target.value)} maxLength={40}/><Button className="secondary" type="button" disabled={!custom.trim()||selected.length>=3} onClick={add}>Add interest</Button></div><p>Your selected interests replace guesses you don’t agree with. Choose up to three.</p></>}
++  {agent.is_stale?<p role="status">The previous agent session is archived because your saved answers or profile changed.</p>:question?<section className="guide-agent-question" aria-label="Discovery Agent question"><h3>A quick question before we continue</h3><p>{question.text}</p><form onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">Answer the saved discovery question</legend>{question.id==='correction'?<><label htmlFor="agent-correction">My correction · aliases and test data only</label><textarea id="agent-correction" value={correction} onChange={e=>setCorrection(e.target.value)} required minLength={3} maxLength={500} rows={3}/></>:<><div className="guide-interest-picker">{[...new Set([...question.options,...selected])].map(value=><button key={value} type="button" aria-pressed={selected.includes(value)} disabled={!selected.includes(value)&&selected.length>=3} onClick={()=>toggle(value)}>{value}</button>)}</div><label htmlFor="agent-interest">Add a preferred interest</label><div className="guide-custom-interest"><input id="agent-interest" value={custom} onChange={e=>setCustom(e.target.value)} maxLength={40}/><Button className="secondary" type="button" disabled={!custom.trim()||selected.length>=3} onClick={add}>Add interest</Button></div><p>Your selected interests replace guesses you don’t agree with. Choose up to three.</p></>}
+    <Button type="submit" busy={busy} disabled={question.id==='correction'?correction.trim().length<3:!selected.length||Boolean(custom.trim())}>Continue with My Answer</Button></fieldset></form><p>{agent.clarifications_remaining} clarifying question{agent.clarifications_remaining===1?'':'s'} remaining. You can edit interests manually at any time.</p></section>:null}
+   {!question&&!agent.is_stale&&agent.message&&<p>{agent.message}</p>}
+   {!readOnly&&!hideManualAction&&!question&&!agent.is_stale&&agent.status==='manual_edit'&&<Button className="secondary" disabled={busy} onClick={()=>onReview(true)}>Open Manual Profile Review</Button>}
+--- before/frontend/src/components/DiscoveryGuide.jsx
++++ after/frontend/src/components/DiscoveryGuide.jsx
+@@ -32,7 +32,7 @@
+ }
+ export function StoryOrigin({guide}) {return <p className="guide-source-label">{guide.status==='groq'?'AI Discovery Story':'Deterministic Discovery Summary · Not AI-generated'}</p>;}
+ export function GuideDetails({guide,onRetry,busy}) {
+- return <details className="guide-generation"><summary>How this was generated</summary><p><strong>{guide.status==='groq'?'Groq-generated Discovery Story':'Deterministic Discovery Summary · Not AI-generated'}</strong></p><p>Model: {guide.model}. Generation status: {guide.status}. Version {guide.version}.</p><p>Recommendation source: {guide.recommendation_source||'legacy output'}. Validation: {guide.diagnostics?.reason||'legacy output'}.</p><p>Fictional data only. Your saved choices and grade, plus stated corrections, guide generation. Your nickname is used here, not sent. This story cannot confirm a profile.</p><h4>What You Chose</h4><ul>{guide.source_answers.map(item=><li key={item.choice_id}>{item.choice}</li>)}</ul><h4>What This Might Suggest</h4><p>Interest clues are tentative or labeled as stated preferences.</p><h4>What You Could Try Next</h4><p>The mini-mission is optional.</p>{guide.status==='fallback'&&<Button className="secondary" disabled={busy} onClick={onRetry}>Retry with Groq</Button>}</details>;
++ return <details className="guide-generation"><summary>How this was generated</summary><p><strong>{guide.status==='groq'?'Groq-generated Discovery Story':'Deterministic Discovery Summary · Not AI-generated'}</strong></p><p>Model: {guide.model}. Generation status: {guide.status}. Version {guide.version}.</p><p>Recommendation source: {guide.recommendation_source||'legacy output'}. Validation: {guide.diagnostics?.reason||'legacy output'}.</p><p>Aliases and test data only. Your saved choices and grade, plus stated corrections, guide generation. Your nickname is used here, not sent. This story cannot confirm a profile.</p><h4>What You Chose</h4><ul>{guide.source_answers.map(item=><li key={item.choice_id}>{item.choice}</li>)}</ul><h4>What This Might Suggest</h4><p>Interest clues are tentative or labeled as stated preferences.</p><h4>What You Could Try Next</h4><p>The mini-mission is optional.</p>{guide.status==='fallback'&&<Button className="secondary" disabled={busy} onClick={onRetry}>Retry with Groq</Button>}</details>;
+ }
+ export function GuideHistory({guideState}) {
+  if(!guideState?.history?.length)return null;
+--- before/frontend/src/components/ExplorerSelection.jsx
++++ after/frontend/src/components/ExplorerSelection.jsx
+@@ -3,7 +3,7 @@
+ import ExplorerSetup from './ExplorerSetup';
+ import {Button,PageHeading} from './Shared';
+ export default function ExplorerSelection({explorers,pid,onSelect,onCreate,onView,onWelcome,view='switch',busy=false}) {
+- return <div className="explorer-selection"><PageHeading eyebrow="LOCAL FICTIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are fictional demo profiles remembered in this browser, not authenticated student accounts. Each keeps its own saved progress.</PageHeading><div className="button-row"><Button className="secondary" onClick={onWelcome} disabled={busy} aria-describedby="welcome-return-help">Back to Welcome</Button><p id="welcome-return-help" className="small-note">Your saved explorers and progress stay available.</p></div><div className={`explorer-selection-layout selection-${view}`}>
++ return <div className="explorer-selection"><PageHeading eyebrow="EDUCATIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are demo profiles saved for testing. Sign in to access your own Explorer.</PageHeading><div className="button-row"><Button className="secondary" onClick={onWelcome} disabled={busy} aria-describedby="welcome-return-help">Back to Welcome</Button><p id="welcome-return-help" className="small-note">Your saved explorers and progress stay available.</p></div><div className={`explorer-selection-layout selection-${view}`}>
+  {view!=='saved'&&<ExplorerSetup key="new-explorer" onCreate={onCreate} busy={busy}/>}
+  {view!=='create'&&<section className="panel saved-profiles" aria-labelledby="saved-explorers-title"><h2 id="saved-explorers-title">Your saved explorers</h2><p>Choose whose adventure to continue.</p>{explorers.length?explorers.map(explorer=><button className={`saved-explorer ${explorer.id===pid?'selected':''}`} key={explorer.id} disabled={busy} onClick={()=>onSelect(explorer.id)}><span className="mini-avatar" aria-hidden="true">{explorer.avatar||'🧭'}</span><span><strong>{explorer.alias?.trim()||'Explorer'}</strong><small>Grade {explorer.grade}{explorer.id===pid?' · Current explorer':''}</small></span><ArrowUpRight size={18} aria-hidden="true"/></button>):<p>No saved explorers are available to this browser yet.</p>}<p className="setup-local-note"><ShieldCheck size={20} aria-hidden="true"/>No email, real name, or birthday needed.</p>{view==='saved'&&<Button className="secondary" onClick={()=>onView('create')}>Create a New Explorer</Button>}</section>}
+  </div>{view==='create'&&explorers.length>0&&<Button className="ghost" onClick={()=>onView('saved')}>Back to saved explorers</Button>}</div>;
+--- before/frontend/src/components/ExplorerSetup.jsx
++++ after/frontend/src/components/ExplorerSetup.jsx
+@@ -8,11 +8,11 @@
+  const id=useId(),[nickname,setNickname]=useState(''),[grade,setGrade]=useState(''),[avatar,setAvatar]=useState('🧭'),[fictional,setFictional]=useState(false),[touched,setTouched]=useState(false);
+  const values={nickname,grade,avatar,fictional},issues=setupProblems(values);
+  const submit=event=>{event.preventDefault();setTouched(true);if(!issues.length&&!busy)onCreate(values);};
+- return <section className="explorer-setup-card" aria-labelledby={`${id}-title`}><span className="welcome-eyebrow">YOUR STARTING POINT</span><h2 id={`${id}-title`}>Create your fictional explorer</h2><p>A nickname, an avatar, and a little curiosity.</p><form className="explorer-setup-form" onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">Explorer setup</legend>
++ return <section className="explorer-setup-card" aria-labelledby={`${id}-title`}><span className="welcome-eyebrow">YOUR STARTING POINT</span><h2 id={`${id}-title`}>Create your explorer</h2><p>A nickname, an avatar, and a little curiosity.</p><form className="explorer-setup-form" onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">Explorer setup</legend>
+  <fieldset className="setup-avatars"><legend>Choose an avatar</legend><div>{AVATARS.map(([icon,label])=><label key={icon} className={avatar===icon?'setup-avatar selected':'setup-avatar'}><input type="radio" name={`${id}-avatar`} value={icon} checked={avatar===icon} onChange={()=>setAvatar(icon)}/><span aria-hidden="true">{icon}</span><span>{label}</span></label>)}</div></fieldset>
+- <label htmlFor={`${id}-name`}>Fictional nickname</label><input id={`${id}-name`} value={nickname} onChange={e=>setNickname(e.target.value)} onBlur={()=>setTouched(true)} placeholder="e.g. Nova Explorer" minLength={2} maxLength={40} required autoComplete="off" aria-invalid={touched&&nickname.trim().length<2?true:undefined} aria-describedby={`${id}-name-help`}/><span className="setup-field-help" id={`${id}-name-help`}>{touched&&nickname.trim().length<2?'Enter at least two characters. ':''}Use a made-up name, never a real student’s name.</span>
++ <label htmlFor={`${id}-name`}>Explorer nickname</label><input id={`${id}-name`} value={nickname} onChange={e=>setNickname(e.target.value)} onBlur={()=>setTouched(true)} placeholder="e.g. Nova Explorer" minLength={2} maxLength={40} required autoComplete="off" aria-invalid={touched&&nickname.trim().length<2?true:undefined} aria-describedby={`${id}-name-help`}/><span className="setup-field-help" id={`${id}-name-help`}>{touched&&nickname.trim().length<2?'Enter at least two characters. ':''}Use a made-up name, never a real student’s name.</span>
+  <label htmlFor={`${id}-grade`}>Grade</label><select id={`${id}-grade`} value={grade} onChange={e=>setGrade(e.target.value)} required><option value="" disabled>Choose your grade</option>{[9,10,11,12].map(value=><option key={value} value={value}>Grade {value}</option>)}</select>
+- <label className="setup-ack"><input type="checkbox" checked={fictional} onChange={e=>setFictional(e.target.checked)} required/><span>This is a fictional explorer. I won’t enter real student information.</span></label>
++ <label className="setup-ack"><input type="checkbox" checked={fictional} onChange={e=>setFictional(e.target.checked)} required/><span>This is a demo explorer. I won’t enter real student information.</span></label>
+  <div id={`${id}-guidance`} className="setup-guidance" aria-live="polite">{issues.length?<><strong>Before you start:</strong><ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul></>:<span>Ready for your first adventure. Creating an explorer earns no XP.</span>}</div>
+  <Button type="submit" busy={busy} disabled={issues.length>0} aria-describedby={`${id}-guidance`} className="full">Create My Explorer<ArrowRight size={20} aria-hidden="true"/></Button>
+  </fieldset></form></section>;
+--- before/frontend/src/components/Shared.jsx
++++ after/frontend/src/components/Shared.jsx
+@@ -8,7 +8,7 @@
+ export function Gate({state, onNavigate}) {
+   const page = !state ? 'profiles' : !state.quest_complete ? 'quests' : 'confirm';
+   const title = !state ? 'First, meet your explorer.' : !state.quest_complete ? 'Find your spark first.' : 'Your profile. Your say.';
+-  const text = !state ? 'Create a fictional profile to start your own exploration journey.' : !state.quest_complete ? 'Complete the three discovery quests, then review the clues in your profile.' : 'Review and confirm your interests before exploring your next steps.';
++  const text = !state ? 'Create a demo profile to start your own exploration journey.' : !state.quest_complete ? 'Complete the three discovery quests, then review the clues in your profile.' : 'Review and confirm your interests before exploring your next steps.';
+   return <div className="empty-state panel"><span className="empty-icon"><LockKeyhole size={30}/></span><h2>{title}</h2><p>{text}</p><Button onClick={() => onNavigate(page)}>{!state ? 'Create my explorer' : !state.quest_complete ? 'Start discovery' : 'Review my profile'}<ArrowRight size={17}/></Button></div>;
+ }
+ export function Sources({sources = []}) {
+--- before/frontend/src/components/StudentIdentity.jsx
++++ after/frontend/src/components/StudentIdentity.jsx
+@@ -1,9 +1,9 @@
+ import React,{useRef} from 'react';
+ import {UserRound,ChevronDown} from 'lucide-react';
+ 
+-export default function StudentIdentity({state,avatar,onNavigate,busy=false,needsReview=false}) {
++export default function StudentIdentity({state,avatar,onNavigate,onLogout,busy=false,needsReview=false}) {
+  const menu=useRef(null),nickname=state?.profile?.alias?.trim()||'Explorer';
+  const go=page=>{if(menu.current)menu.current.open=false;onNavigate(page);};
+  if(!state)return <button className="global-create-explorer" disabled={busy} onClick={()=>go('welcome')}><UserRound size={20} aria-hidden="true"/>Explorer setup</button>;
+- return <details className="identity-menu" ref={menu} onKeyDown={event=>{if(event.key==='Escape'){menu.current.open=false;menu.current.querySelector('summary')?.focus();}}}><summary aria-label={`Student profile: ${nickname}, Grade ${state.profile.grade}`}><span className="identity-avatar" aria-hidden="true">{avatar||<UserRound size={24}/>}</span><span className="identity-copy"><strong>{nickname}</strong><span>Grade {state.profile.grade}</span></span><ChevronDown size={16} aria-hidden="true"/></summary><div className="identity-actions"><p>Fictional explorer · Local demo</p>{needsReview&&<p className="identity-review">Profile Needs Review</p>}<button disabled={busy} onClick={()=>go('confirm')}>Explorer Profile</button><button disabled={busy} onClick={()=>go('profiles')}>Switch Explorer</button><details><summary>Earlier saved activities</summary><button onClick={()=>go('roadmap')} disabled={busy}>My Roadmap</button><button onClick={()=>go('journey')} disabled={busy}>My Journey</button></details></div></details>;
++ return <details className="identity-menu" ref={menu} onKeyDown={event=>{if(event.key==='Escape'){menu.current.open=false;menu.current.querySelector('summary')?.focus();}}}><summary aria-label={`Student profile: ${nickname}, Grade ${state.profile.grade}`}><span className="identity-avatar" aria-hidden="true">{avatar||<UserRound size={24}/>}</span><span className="identity-copy"><strong>{nickname}</strong><span>Grade {state.profile.grade}</span></span><ChevronDown size={16} aria-hidden="true"/></summary><div className="identity-actions"><p>Explorer · Educational demo</p>{needsReview&&<p className="identity-review">Profile Needs Review</p>}<button disabled={busy} onClick={()=>go('confirm')}>Explorer Profile</button><button disabled={busy} onClick={()=>onLogout?onLogout():go('profiles')}>{onLogout?'Sign Out / Switch Account':'Switch Explorer'}</button><details><summary>Earlier saved activities</summary><button onClick={()=>go('roadmap')} disabled={busy}>My Roadmap</button><button onClick={()=>go('journey')} disabled={busy}>My Journey</button></details></div></details>;
+ }
+--- before/frontend/src/components/auth.css
++++ after/frontend/src/components/auth.css
+@@ -0,0 +1 @@
++.auth-page{min-height:100vh;background:linear-gradient(135deg,#f3edff,#eef8ff);color:#24223c;font-size:18px}.auth-page>header{display:flex;align-items:center;gap:10px;padding:24px max(24px,calc((100vw - 1160px)/2));background:#fff;color:#613cc1;font-size:23px}.auth-page header strong{color:#27233c}.auth-page header span{color:#633fc1}.auth-layout{max-width:1160px;margin:auto;display:grid;grid-template-columns:1.05fr 1fr;gap:64px;padding:64px 28px;align-items:start}.auth-intro{padding-top:20px}.auth-intro h1{font-size:42px;line-height:1.15;max-width:550px;overflow-wrap:anywhere}.auth-intro p{font-size:18px;line-height:1.65}.auth-compass{color:#734bc6;margin:28px 0}.auth-intro .auth-demo-note{font-size:16px;color:#514b67}.auth-card{background:#fff;border:1px solid #d9ceee;border-radius:28px;padding:32px;box-shadow:0 16px 40px #5e3c9a12}.auth-card h2{font-size:30px;margin:14px 0}.auth-card>p{line-height:1.6}.auth-card fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;min-width:0;gap:10px}.auth-card label{font-size:18px;font-weight:650;margin-top:12px}.auth-card input:not([type=checkbox]){width:100%;box-sizing:border-box;min-height:50px;font:inherit;padding:12px;border-radius:12px;border:1px solid #89829b;color:#25203e}.auth-card small,.auth-help{font-size:15px;line-height:1.5;color:#56516b}.auth-card .auth-ack{display:flex;gap:12px;align-items:flex-start;font-size:16px;font-weight:400;line-height:1.5}.auth-card .auth-ack span{font-size:16px}.auth-ack input{margin-top:5px;flex-shrink:0;width:20px;height:20px}.auth-primary{display:flex;align-items:center;justify-content:center;gap:14px;background:#6134c5;color:#fff;border:0;border-radius:12px;min-height:52px;font:inherit;font-weight:700;padding:14px;margin-top:18px;cursor:pointer}.auth-primary:disabled{background:#e3deed;color:#5c546e;cursor:default}.auth-switch,.auth-retry{font:inherit;font-size:16px;background:none;border:0;color:#5631a8;text-decoration:underline;min-height:44px;cursor:pointer}.auth-switch{display:block;margin-top:18px;text-align:left}.auth-error{background:#fff0f0;color:#8d172b;border:1px solid #d3919a;border-radius:12px;padding:14px}.auth-page :focus-visible{outline:3px solid #5630b5;outline-offset:4px}.auth-session-error{background:#fff0f0;color:#8d172b;padding:16px;position:relative;z-index:100}.auth-session-error button{font:inherit;margin-left:16px}.account-signout{font:inherit;border:1px solid #d3c6ef;background:#f4efff;color:#503294;min-height:44px;border-radius:10px;padding:8px 14px;margin-left:auto}.account-header{display:flex;align-items:center;gap:12px;margin-left:auto;font-size:16px;overflow-wrap:anywhere}.account-header span{max-width:180px}@media(max-width:767px){.auth-layout{grid-template-columns:1fr;gap:24px;padding:28px 18px}.auth-intro{padding:0}.auth-intro h1{font-size:30px}.auth-intro p{font-size:17px}.auth-compass{display:none}.auth-card{padding:24px 20px;border-radius:22px}.auth-card h2{font-size:28px}.auth-card label{font-size:17px}.auth-page{font-size:17px}.auth-page>header{padding:20px}.account-header span{max-width:100px}}@media(prefers-reduced-motion:reduce){.auth-page *{animation:none!important;transition:none!important}}
+--- before/frontend/src/explorerSetup.js
++++ after/frontend/src/explorerSetup.js
+@@ -2,9 +2,9 @@
+ // select an explorer; only a validated backend profile response can do that.
+ export function setupProblems({nickname='',grade='',fictional=false}) {
+   const issues=[];
+-  if(nickname.trim().length<2||nickname.trim().length>40)issues.push('Enter a fictional nickname (2–40 characters).');
++  if(nickname.trim().length<2||nickname.trim().length>40)issues.push('Enter an explorer nickname (2–40 characters).');
+   if(![9,10,11,12].includes(Number(grade)))issues.push('Choose Grade 9, 10, 11 or 12.');
+-  if(!fictional)issues.push('Confirm that you will use fictional information only.');
++  if(!fictional)issues.push('Confirm that you will use aliases and test data only.');
+   return issues;
+ }
+ export function creationRequest(values, storage=sessionStorage, newKey=()=>crypto.randomUUID()) {
+--- before/frontend/src/main.jsx
++++ after/frontend/src/main.jsx
+@@ -2,9 +2,10 @@
+ import {createRoot} from 'react-dom/client';
+ import App from './App';
+ import DeveloperResearch from './pages/DeveloperResearch';
++import AuthGate from './components/AuthGate';
+ import './style.css';
+ 
+-createRoot(document.getElementById('root')).render(window.location.pathname==='/developer'?<DeveloperResearch/>:<App/>);
++createRoot(document.getElementById('root')).render(<AuthGate>{(account,onLogout)=>window.location.pathname==='/developer'?<DeveloperResearch/>:<App key={account.id} account={account} onLogout={onLogout}/>}</AuthGate>);
+ 
+ import './spec.css';
+ import './components/global-ui.css';
+--- before/frontend/src/pages/CareerDiscoveryMilestone.jsx
++++ after/frontend/src/pages/CareerDiscoveryMilestone.jsx
+@@ -10,7 +10,7 @@
+ 
+ export function MilestoneView({progress,loading=false,error='',busy=false,onRetry,onCreate,onExplore,onShortlist,onRecover}) {
+  const eligible=progress?.eligible===true,nickname=progress?.nickname?.trim()||'Explorer';
+- const recovery={profiles:['Create My Explorer','Create a fictional explorer to begin collecting your own possibilities.'],quests:['Continue My Discovery Quests','Finish your discovery quests and review your profile before creating a portfolio.'],confirm:['Review My Explorer Profile','Review and confirm your current interests. Your earlier research and saved choices stay in history.'],worlds:['Explore Career Worlds','Save a researched career and your path preferences, or choose I’m Still Exploring, on Explore Careers first.']}[progress?.recovery_page||'profiles'];
++ const recovery={profiles:['Create My Explorer','Create a demo explorer to begin collecting your own possibilities.'],quests:['Continue My Discovery Quests','Finish your discovery quests and review your profile before creating a portfolio.'],confirm:['Review My Explorer Profile','Review and confirm your current interests. Your earlier research and saved choices stay in history.'],worlds:['Explore Career Worlds','Save a researched career and your path preferences, or choose I’m Still Exploring, on Explore Careers first.']}[progress?.recovery_page||'profiles'];
+  return <div className={`career-discovery-milestone${progress?.returning_portfolio?' is-returning':''}`} aria-busy={loading||busy}>
+   <div className="milestone-glow" aria-hidden="true"/><section className="milestone-hero" aria-labelledby="career-milestone-title"><div className="milestone-welcome"><span className="milestone-eyebrow"><Compass size={16} aria-hidden="true"/>FINAL STEP OF THIS ADVENTURE</span><h1 id="career-milestone-title" tabIndex={-1}>{loading?'Opening your next adventure…':eligible?`You did it, ${nickname}!`:`Your adventure is taking shape, ${nickname}.`}</h1><p className="milestone-subtitle">{eligible?"You've turned curiosity into possibilities.":'There’s room to explore, one small step at a time.'}</p><p>Bring your interests and saved careers together. Your next adventure is a map of possibilities, shaped by you.</p></div><AdventureScene/></section>
+   {error&&<div className="milestone-error" role="alert"><p>{error}</p><Button className="secondary" disabled={busy} onClick={onRetry}>Retry</Button></div>}
+--- before/frontend/src/pages/DeveloperResearch.jsx
++++ after/frontend/src/pages/DeveloperResearch.jsx
+@@ -17,5 +17,5 @@
+  const work=async fn=>{if(busy)return;setBusy(true);setError('');try{await fn();}catch(err){setError(err.message);if(err.status===403){setAccess(false);setReceipts([]);}}finally{setBusy(false);}};
+  const load=async()=>{const value=await api(`/developer/profiles/${encodeURIComponent(pid.trim())}/research-receipts`);setReceipts(value.receipts);};
+  const run=()=>work(async()=>{await api(`/developer/profiles/${encodeURIComponent(pid.trim())}/research`,'POST',{message:world?'Explore selected Career World':question.trim(),world_ids:world?[world]:[],use_groq:groq,simulate_failure:failure});await load();});
+- return <div className="spec-shell developer-research"><main className="spec-page" id="main"><a href="/">Return to student experience</a><PageHeading eyebrow="LOCAL TESTING ONLY" title="Career Research Developer View">Inspect saved routing receipts and run controlled research tests with fictional explorers only.</PageHeading>{error&&<p role="alert">{error}</p>}{access===null?<p role="status">Checking server authorization…</p>:!access?<><p>Developer tools are unavailable in this environment.</p><Button onClick={check}>Retry authorization</Button></>:<><p className="alert notice">Explicit local development mode · No identity authentication. Do not enable this mode on shared/public servers, proxies or tunnels. No API keys, student answers or model reasoning are displayed.</p><section className="panel"><h2>Controlled research test</h2><label htmlFor="developer-profile">Fictional Explorer ID</label><input id="developer-profile" value={pid} onChange={e=>{setPid(e.target.value);setReceipts([]);}} maxLength={100}/><Button className="secondary" disabled={!pid.trim()||busy} onClick={()=>work(load)}>Load saved research receipts</Button><label htmlFor="developer-world">World selection (deterministic)</label><select id="developer-world" value={world} onChange={e=>setWorld(e.target.value)}><option value="">Use question routing</option>{worlds.map(w=><option key={w.world_id} value={w.world_id}>{w.title}</option>)}</select><label htmlFor="developer-question">Fictional research question</label><textarea id="developer-question" value={question} onChange={e=>setQuestion(e.target.value)} maxLength={800} disabled={Boolean(world)} rows={3}/><label className="developer-checkbox"><input type="checkbox" checked={groq} onChange={e=>setGroq(e.target.checked)} disabled={Boolean(world)}/>Use existing Groq model for question routing</label><p>With a world selected, routing follows that explicit choice. With question routing, Groq is used only when selected; errors use the labeled bounded fallback.</p><label className="developer-checkbox"><input type="checkbox" checked={failure} onChange={e=>setFailure(e.target.checked)}/>Simulate research failure</label><p>Runs retain normal confirmation gates and save research history. They do not shortlist a career, award XP or create a plan.</p><Button disabled={busy||!pid.trim()||(!world&&question.trim().length<3)} busy={busy} onClick={run}>Run controlled research</Button></section><section aria-label="Research receipts" aria-live="polite">{receipts.length?receipts.map(r=><ResearchReceipt key={r.run_id} receipt={r}/>):<p>No research receipts loaded.</p>}</section></>}</main></div>;
++ return <div className="spec-shell developer-research"><main className="spec-page" id="main"><a href="/">Return to student experience</a><PageHeading eyebrow="LOCAL TESTING ONLY" title="Career Research Developer View">Inspect saved routing receipts and run controlled research tests with demo explorers only.</PageHeading>{error&&<p role="alert">{error}</p>}{access===null?<p role="status">Checking server authorization…</p>:!access?<><p>Developer tools are unavailable in this environment.</p><Button onClick={check}>Retry authorization</Button></>:<><p className="alert notice">Explicit local development mode · No identity authentication. Do not enable this mode on shared/public servers, proxies or tunnels. No API keys, student answers or model reasoning are displayed.</p><section className="panel"><h2>Controlled research test</h2><label htmlFor="developer-profile">Demo Explorer ID</label><input id="developer-profile" value={pid} onChange={e=>{setPid(e.target.value);setReceipts([]);}} maxLength={100}/><Button className="secondary" disabled={!pid.trim()||busy} onClick={()=>work(load)}>Load saved research receipts</Button><label htmlFor="developer-world">World selection (deterministic)</label><select id="developer-world" value={world} onChange={e=>setWorld(e.target.value)}><option value="">Use question routing</option>{worlds.map(w=><option key={w.world_id} value={w.world_id}>{w.title}</option>)}</select><label htmlFor="developer-question">Demo research question</label><textarea id="developer-question" value={question} onChange={e=>setQuestion(e.target.value)} maxLength={800} disabled={Boolean(world)} rows={3}/><label className="developer-checkbox"><input type="checkbox" checked={groq} onChange={e=>setGroq(e.target.checked)} disabled={Boolean(world)}/>Use existing Groq model for question routing</label><p>With a world selected, routing follows that explicit choice. With question routing, Groq is used only when selected; errors use the labeled bounded fallback.</p><label className="developer-checkbox"><input type="checkbox" checked={failure} onChange={e=>setFailure(e.target.checked)}/>Simulate research failure</label><p>Runs retain normal confirmation gates and save research history. They do not shortlist a career, award XP or create a plan.</p><Button disabled={busy||!pid.trim()||(!world&&question.trim().length<3)} busy={busy} onClick={run}>Run controlled research</Button></section><section aria-label="Research receipts" aria-live="polite">{receipts.length?receipts.map(r=><ResearchReceipt key={r.run_id} receipt={r}/>):<p>No research receipts loaded.</p>}</section></>}</main></div>;
+ }
+--- before/frontend/src/pages/DiscoveryQuests.jsx
++++ after/frontend/src/pages/DiscoveryQuests.jsx
+@@ -49,7 +49,7 @@
+     {model.needsReconfirmation&&<div className="quest-review-alert" role="status"><strong>Your updated clues need another review.</strong><p>Your earlier confirmed profile and saved roadmaps are preserved. Confirm the updated Explorer Profile before personalized research or new plans.</p></div>}
+     {feedback&&<p className="quest-save-feedback" role="status">{feedback}</p>}
+     {model.allComplete&&<div hidden={view!=='summary'}><DiscoveryGuide key={state.profile.id} state={state}/></div>}
+-    {view!=='summary'&&!model.allComplete&&<p className="small-note">After all three quests, your fictional saved choices and grade go to Groq to create your Discovery Guide. If unavailable, you’ll see a labeled deterministic summary. No XP is awarded for guide generation.</p>}
++    {view!=='summary'&&!model.allComplete&&<p className="small-note">After all three quests, your saved demo choices and grade go to Groq to create your Discovery Guide. If unavailable, you’ll see a labeled deterministic summary. No XP is awarded for guide generation.</p>}
+     {view==='summary'?<section className="panel discovery-clues"><span className="eyebrow">{model.allComplete?'DISCOVERY COMPLETE':'YOUR SAVED DISCOVERIES'}</span><h2>Your Discovery Clues</h2><p>{model.completed} of {model.steps.length} quests saved.{model.questXP!==null&&<> {model.questXP} quest XP earned.</>}</p><p>These clues come from your saved answers. They are possibilities to explore, not fixed labels or career-fit scores.</p><div className="discovery-clue-grid">{model.steps.map(item=><article className="discovery-clue" key={item.index}><span className="clue-number">{String(item.index+1).padStart(2,'0')}</span><h3>{item.title}</h3>{item.answer?<><span className="saved-answer-label">You chose</span><p className="saved-answer-text">{item.choice}</p><span className="discovery-interest">Clue to explore: {item.clue}</span><time dateTime={item.answer.created_at}>Saved {new Date(item.answer.created_at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</time><button className="text-button" disabled={busy} aria-label={`Edit answer for ${item.title}`} onClick={()=>edit(item.index)}><Pencil size={16} aria-hidden="true"/>Edit answer</button></>:<p>Not answered yet. Your next clue is waiting.</p>}</article>)}</div><Button disabled={busy} onClick={()=>model.allComplete?onNavigate('confirm'):show(model.firstIncomplete)}>{model.allComplete?reviewLabel:'Continue my next quest'}<ArrowRight size={17} aria-hidden="true"/></Button><p className="small-note">Revisiting, cancelling edits and saving changed answers never grant quest XP twice.</p></section>:quest&&<div className="quest-layout"><QuestProgress model={model} step={view} busy={busy} onReview={requestView}/><section className="panel quest-panel"><div className="quest-meta"><span>QUEST {quest.index+1} OF {model.steps.length}</span><span className="xp-pill">{quest.answer?'Saved · Edits earn no extra XP':model.firstCompletionXP!==null?`+${model.firstCompletionXP} XP on first completion`:'Rewards saved with your explorer'}</span></div><div className="quest-progress" role="progressbar" aria-label="Completed quests" aria-valuenow={model.completed} aria-valuemin={0} aria-valuemax={model.steps.length}><span style={{width:`${model.completed/Math.max(model.steps.length,1)*100}%`}}/></div><div className="scenario-illustration" aria-hidden="true"><span/><span/>{quest.index===0?<Sparkles size={58}/>:quest.index===1?<Globe2 size={58}/>:<Compass size={58}/>}</div><span className="eyebrow">{quest.title}</span><h2>{quest.question}</h2>{quest.answer&&<p className="quest-saved-answer"><Check size={18} aria-hidden="true"/><strong>Saved answer:</strong> {original}</p>}<p>{quest.answer?(editing?'Choose a replacement, then save it explicitly. Cancel keeps your saved answer.':'This answer is saved. Select Edit answer to make a change.'):'Choose whatever sounds interesting today. You can edit your answer later.'}</p><fieldset className="quest-choices" disabled={busy||!editable}><legend className="sr-only">{editable?'Choose one activity':'Your saved answer'}</legend>{Object.keys(quest.options).map((option,index)=><ChoiceTile key={`${quest.index}:${option}`} choice={option} index={index} selected={selection===option} busy={busy||!editable} onSelect={()=>dispatchEditor({type:'choose',choice:option})}/>)}</fieldset>{editable&&selection&&<p className="choice-feedback">A useful clue to explore. This choice doesn’t define what you can do.</p>}
+       {quest.answer&&editing?<div className="quest-controls"><Button className="ghost" disabled={busy} onClick={cancel}><X size={16} aria-hidden="true"/>Cancel edits</Button><Button busy={busy} disabled={!draft||draft===original} onClick={save}><Save size={16} aria-hidden="true"/>Save changes</Button></div>:<div className="quest-controls"><Button className="ghost" disabled={busy||quest.index===0} onClick={()=>requestView(quest.index-1)}><ArrowLeft size={16} aria-hidden="true"/>Previous</Button>{quest.answer?<div className="quest-saved-controls"><Button className="secondary" disabled={busy} onClick={()=>edit(quest.index)}><Pencil size={16} aria-hidden="true"/>Edit answer</Button><Button disabled={busy} onClick={()=>requestView(quest.index+1<model.steps.length?quest.index+1:'summary')}>{quest.index+1<model.steps.length?'Next quest':'View Discovery Clues'}<ArrowRight size={16} aria-hidden="true"/></Button></div>:<Button busy={busy} disabled={!draft} onClick={save}>{quest.index===model.steps.length-1?'Finish discovery':'Continue'}<ArrowRight size={16} aria-hidden="true"/></Button>}</div>}
+       {quest.answer&&<p className="small-note">Only Save changes updates a saved answer. Changed answers reopen profile review; earlier confirmed profiles and saved roadmaps stay in history.</p>}
+--- before/frontend/src/pages/ExplorerProfile.jsx
++++ after/frontend/src/pages/ExplorerProfile.jsx
+@@ -23,7 +23,7 @@
+ }
+ export function ProfileEditor({values,onChange,busy,onPending,suggestions}) {
+  const update=patch=>onChange({...values,...patch});
+- return <div className="profile-manual-editor"><h3>Interests to explore</h3><InterestChipEditor values={values.interests} busy={busy} onPending={onPending} onChange={interests=>update({interests,not_sure:false})}/><div className="profile-choice-actions"><button className="text-button" disabled={busy} onClick={()=>update({interests:suggestions,not_sure:false})}>Use quest suggestions</button><button className="text-button" disabled={busy} onClick={()=>update({interests:[]})}>Clear suggestions</button></div><label className="checkbox-label unsure-choice"><input type="checkbox" disabled={busy} checked={values.not_sure} onChange={e=>update({not_sure:e.target.checked,...(e.target.checked?{interests:[],goal:'Not sure yet',learning_style:'Still figuring it out'}:{})})}/>I’m not sure yet. I want to keep my options open.</label><label htmlFor="review-learning">Preferred activities</label><select id="review-learning" value={values.learning_style} disabled={busy} onChange={e=>update({learning_style:e.target.value})}>{[...new Set([...STYLES,values.learning_style])].map(value=><option key={value}>{value}</option>)}</select><label htmlFor="review-goal">Exploration goal</label><select id="review-goal" value={values.goal} disabled={busy} onChange={e=>update({goal:e.target.value})}>{[...new Set([...GOALS,values.goal])].map(value=><option key={value}>{value}</option>)}</select><label htmlFor="profile-correction">Anything we missed? <small>Optional correction</small></label><textarea id="profile-correction" value={values.correction} maxLength={500} disabled={busy} onChange={e=>update({correction:e.target.value})} rows={3} placeholder="For this fictional explorer, I’d rather explore…"/><p className="small-note">Fictional information only. Changes stay unconfirmed until you review and explicitly confirm them.</p></div>;
++ return <div className="profile-manual-editor"><h3>Interests to explore</h3><InterestChipEditor values={values.interests} busy={busy} onPending={onPending} onChange={interests=>update({interests,not_sure:false})}/><div className="profile-choice-actions"><button className="text-button" disabled={busy} onClick={()=>update({interests:suggestions,not_sure:false})}>Use quest suggestions</button><button className="text-button" disabled={busy} onClick={()=>update({interests:[]})}>Clear suggestions</button></div><label className="checkbox-label unsure-choice"><input type="checkbox" disabled={busy} checked={values.not_sure} onChange={e=>update({not_sure:e.target.checked,...(e.target.checked?{interests:[],goal:'Not sure yet',learning_style:'Still figuring it out'}:{})})}/>I’m not sure yet. I want to keep my options open.</label><label htmlFor="review-learning">Preferred activities</label><select id="review-learning" value={values.learning_style} disabled={busy} onChange={e=>update({learning_style:e.target.value})}>{[...new Set([...STYLES,values.learning_style])].map(value=><option key={value}>{value}</option>)}</select><label htmlFor="review-goal">Exploration goal</label><select id="review-goal" value={values.goal} disabled={busy} onChange={e=>update({goal:e.target.value})}>{[...new Set([...GOALS,values.goal])].map(value=><option key={value}>{value}</option>)}</select><label htmlFor="profile-correction">Anything we missed? <small>Optional correction</small></label><textarea id="profile-correction" value={values.correction} maxLength={500} disabled={busy} onChange={e=>update({correction:e.target.value})} rows={3} placeholder="For this demo explorer, I’d rather explore…"/><p className="small-note">Aliases and test data only. Changes stay unconfirmed until you review and explicitly confirm them.</p></div>;
+ }
+ export default function ExplorerProfile({state,quests,values,onChange,onConfirm,onSaveRevision,onGuideUpdated,onBeginEdit,onNavigate,busy,dirty,onPending}) {
+  if(!state?.quest_complete)return <div className="spec-page"><PageHeading eyebrow="EXPLORER PROFILE" title="Your profile. Your say.">Complete your three quests, then review what you want to explore.</PageHeading><Gate state={state} onNavigate={onNavigate}/></div>;
+--- before/frontend/src/pages/Welcome.jsx
++++ after/frontend/src/pages/Welcome.jsx
+@@ -16,7 +16,7 @@
+   const journey = progress.journey;
+   const hero = welcomeHero(state,questTotal,progress);
+   const savedNickname = state?.profile?.alias?.trim() || 'explorer';
+-  if(mode==='setup'||mode==='choose')return <div className={`welcome-page onboarding-welcome onboarding-${mode}`}><div className="onboarding-grid"><section className="onboarding-introduction" aria-labelledby="welcome-title"><span className="welcome-eyebrow">WELCOME TO CAREERQUEST AI</span><h1 id="welcome-title">Your next chapter starts with curiosity.</h1><p>Play three discovery quests, explore career possibilities, and create a personal map of what interests you. You don’t need to have your future figured out.</p><div className="onboarding-art" aria-hidden="true"><span className="onboarding-orbit"/><Compass size={94} strokeWidth={1.3}/><span className="onboarding-spark">✦</span></div><ol className="onboarding-preview" aria-label="What your adventure includes"><li>Discover your interests</li><li>Explore careers</li><li>Create your portfolio</li></ol><p className="onboarding-local">For Grades 9–12 · Local fictional demo profiles</p></section>{mode==='setup'?<ExplorerSetup onCreate={onCreate} busy={busy}/>:<section className="explorer-setup-card returning-choice"><span className="welcome-eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2>Your adventure is waiting.</h2><p>This browser remembers saved fictional explorers. Choose whose journey to continue, or start a new one.</p><Button onClick={()=>onExplorerChoice('saved')} busy={busy}>Continue My Adventure<ArrowRight size={20} aria-hidden="true"/></Button><Button className="secondary" onClick={()=>onExplorerChoice('create')} busy={busy}>Create a New Explorer</Button><p className="setup-local-note">These are local demo profiles, not authenticated student accounts.</p></section>}</div></div>;
++  if(mode==='setup'||mode==='choose')return <div className={`welcome-page onboarding-welcome onboarding-${mode}`}><div className="onboarding-grid"><section className="onboarding-introduction" aria-labelledby="welcome-title"><span className="welcome-eyebrow">WELCOME TO CAREERQUEST AI</span><h1 id="welcome-title">Your next chapter starts with curiosity.</h1><p>Play three discovery quests, explore career possibilities, and create a personal map of what interests you. You don’t need to have your future figured out.</p><div className="onboarding-art" aria-hidden="true"><span className="onboarding-orbit"/><Compass size={94} strokeWidth={1.3}/><span className="onboarding-spark">✦</span></div><ol className="onboarding-preview" aria-label="What your adventure includes"><li>Discover your interests</li><li>Explore careers</li><li>Create your portfolio</li></ol><p className="onboarding-local">For Grades 9–12 · Demo profiles using test data</p></section>{mode==='setup'?<ExplorerSetup onCreate={onCreate} busy={busy}/>:<section className="explorer-setup-card returning-choice"><span className="welcome-eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2>Your adventure is waiting.</h2><p>This browser remembers saved demo explorers. Choose whose journey to continue, or start a new one.</p><Button onClick={()=>onExplorerChoice('saved')} busy={busy}>Continue My Adventure<ArrowRight size={20} aria-hidden="true"/></Button><Button className="secondary" onClick={()=>onExplorerChoice('create')} busy={busy}>Create a New Explorer</Button><p className="setup-local-note">These are local demo profiles, not authenticated student accounts.</p></section>}</div></div>;
+   const title = mode==='aboard'?`Welcome aboard, ${savedNickname}!`:hero.title;
+   const message = mode==='aboard'?'Your first quest is ready. There are no right or wrong answers.':hero.message;
+   return <div className={`welcome-page welcome-mode-${mode}`}>
+@@ -28,6 +28,6 @@
+     </section>
+     {mode==='aboard'&&<section className="welcome-first-mission" aria-labelledby="first-mission-title"><span className="first-mission-icon" aria-hidden="true"><Sparkles size={38}/></span><div><span className="welcome-eyebrow">FIRST MISSION</span><h2 id="first-mission-title">Discover Your Spark</h2><p>What would you choose on a free afternoon? Collect your first clue in Quest 1.</p><p className="first-mission-note">Creating an explorer earns no points. Your discoveries earn Explorer Points as you go.</p><Button onClick={()=>onNavigate('quests')} busy={busy}>Start My First Quest<ArrowRight size={20} aria-hidden="true"/></Button></div></section>}
+     {mode==='returning'&&<StudentTrail journey={journey} onNavigate={onNavigate} busy={busy}/>}
+-    <p className="welcome-demo-note">A fictional-student educational demo. Career guidance uses curated offline sources and makes no admissions predictions.</p>
++    <p className="welcome-demo-note">A alias-only educational demo. Career guidance uses curated offline sources and makes no admissions predictions.</p>
+   </div>;
+ }
+--- before/frontend/src/welcomeHero.js
++++ after/frontend/src/welcomeHero.js
+@@ -5,7 +5,7 @@
+ export function welcomeHero(state, questTotal=3, progress=studentExperience(state)) {
+   const nickname=state?.profile?.alias?.trim()||'explorer';
+   let title=`Hi, ${nickname}! 👋`,message,phase;
+-  if(!state){phase='setup';message='Your first discovery quest is waiting. Choose a fictional nickname and grade, then begin from your Adventure Trail. There are no right or wrong answers.';}
++  if(!state){phase='setup';message='Your first discovery quest is waiting. Choose a explorer nickname and grade, then begin from your Adventure Trail. There are no right or wrong answers.';}
+   else if(!state.quest_complete){phase=state.quest_count>0?'partial':'new';message=state.quest_count>0
+     ?`You’ve completed ${state.quest_count} of ${questTotal} discovery quests. Every clue helps you notice what sparks your curiosity.`
+     :`A fresh adventure is waiting for you. ${questTotal} short discovery quests will help you collect your first clues.`;}
+--- before/frontend/tests/auth-api.test.js
++++ after/frontend/tests/auth-api.test.js
+@@ -0,0 +1,22 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {api,setCsrfToken} from '../src/api.js';
++
++test('authenticated requests use same-origin cookies and an in-memory CSRF header',async()=>{
++ const original=globalThis.fetch;let captured;
++ globalThis.fetch=async(url,options)=>{captured={url,options};return {ok:true,json:async()=>({saved:true})};};
++ try{
++  setCsrfToken('test-csrf');await api('/profiles/owned/draft','POST',{interests:['science']});
++  assert.equal(captured.options.credentials,'same-origin');assert.equal(captured.options.headers['X-CSRF-Token'],'test-csrf');assert.equal(captured.options.headers['X-CQ-Request'],'1');
++  setCsrfToken('');await api('/auth/login','POST',{username:'demo_alias',password:'test passphrase'});assert.equal(captured.options.headers['X-CSRF-Token'],'');
++ }finally{globalThis.fetch=original;setCsrfToken('');}
++});
++test('expired private requests return to login while invalid login stays on the form',async()=>{
++ const original=globalThis.fetch,previous=globalThis.window;const events=[];
++ globalThis.window={dispatchEvent:event=>events.push(event.type)};
++ globalThis.fetch=async()=>({ok:false,status:401,json:async()=>({detail:'Please sign in'})});
++ try{
++  await assert.rejects(api('/profiles/owned'),/Please sign in/);assert.deepEqual(events,['cq-session-expired']);
++  await assert.rejects(api('/auth/login','POST',{}),/Please sign in/);assert.equal(events.length,1);
++ }finally{globalThis.fetch=original;globalThis.window=previous;}
++});
+--- before/frontend/tests/discovery-agent.test.js
++++ after/frontend/tests/discovery-agent.test.js
+@@ -12,7 +12,7 @@
+ const agent={session_id:'fictional-session',status:'awaiting_clarification',is_stale:false,pending_confirmation:true,story_id:'story-1',recommendations:[],trace:[],engine:'langgraph',fallback_used:false,clarifications_remaining:1,question:{id:'preferred_interests',text:'What would you prefer to explore?',options:['science','design'],selected_interests:['design']}};
+ const render=value=>renderToStaticMarkup(React.createElement(Panel,{agent:value,onAnswer:()=>{},onReview:()=>{}}));
+ test('saved clarifying question restores selected interests and manual agency',()=>{const html=render(agent);assert.match(html,/A quick question before we continue/);assert.match(html,/<button[^>]*aria-pressed="true"[^>]*>design<\/button>/);assert.match(html,/Continue with My Answer/);assert.match(html,/1 clarifying question remaining/);assert.match(html,/edit interests manually at any time/);});
+-test('correction clarification is required and bounded',()=>{const html=render({...agent,question:{id:'correction',text:'What should change?',options:[],selected_interests:[]}});assert.match(html,/required="" minLength="3" maxLength="500"/);assert.match(html,/My correction · fictional information only/);});
++test('correction clarification is required and bounded',()=>{const html=render({...agent,question:{id:'correction',text:'What should change?',options:[],selected_interests:[]}});assert.match(html,/required="" minLength="3" maxLength="500"/);assert.match(html,/My correction · aliases and test data only/);});
+ test('fallback and model-directed decisions are distinguished without claiming profile confirmation',()=>{const html=render({...agent,fallback_used:true,question:null,trace:[{sequence:1,action:'revise_discovery_story',method:'bounded_policy_fallback',model:'openai/gpt-oss-120b',status:'completed',error:{error_type:'HTTPError',http_status:429},output:{generation_status:'fallback'}},{sequence:2,action:'suggest_career_worlds',method:'groq',model:'openai/gpt-oss-120b',status:'completed',output:{recommendations:[]}}]});for(const text of ['bounded fallback','Bounded fallback selected this tool','Groq selected this tool','HTTP 429','Still required','cannot confirm a profile'])assert.ok(html.includes(text));});
+ test('stale sessions hide old questions and label the archive',()=>{const html=render({...agent,is_stale:true});assert.doesNotMatch(html,/Continue with My Answer/);assert.match(html,/previous agent session is archived/);});
+ test('agent recommendations project only onto the matching fresh story without mutation',()=>{const result={guide:{latest:{id:'story-1',content:{career_worlds:[]}},history:[]},agent:{...agent,question:null,recommendation_method:'groq',recommendations:[{world_id:'design'}],changes:{added:['design']}}};const before=JSON.stringify(result);const shown=view(result);assert.equal(shown.latest.recommendation_source,'groq_tool_selection');assert.equal(shown.latest.content.career_worlds[0].world_id,'design');assert.equal(JSON.stringify(result),before);assert.equal(view({...result,agent:{...result.agent,is_stale:true}}).latest.content.career_worlds.length,0);});
+--- before/replit.md
++++ after/replit.md
+@@ -1,47 +1,11 @@
+-# CareerQuest AI — Replit handoff
++# CareerQuest AI — authenticated Replit handoff
+ 
+-Read AGENTS.md first. This is a synthetic-only educational prototype, not a
+-production student system. Keep the existing React + FastAPI implementation,
+-Groq integration (model `openai/gpt-oss-120b`), LangGraph workflow, SQLite event
+-history and Streamlit fallback. Do not replace them with a generated mock app.
++Read AGENTS.md and docs/CLOUD_DEPLOYMENT.md first. Import the existing app; do not rebuild it. This is an alias-only external demo for Grades 9–12, not a production system for real student information.
+ 
+-Run uses scripts/replit-setup.sh then scripts/replit-run.sh. FastAPI serves the
+-compiled React frontend and /api on one port. No separate Vite server or CORS
+-change is needed. Put GROQ_API_KEY in backend Secrets; never read/display it,
+-embed it in React, or introduce a VITE_ credential. Deterministic policy works
+-without it. Retrieval remains offline, not live verified research.
++Run builds dependencies and starts FastAPI serving React on port 8000. Self-registration and username/password login are required. Each account owns one Explorer; server-side sessions and ownership gates protect all profile, research, history and PDF endpoints. Do not restore the old browser-local selector as an authorization mechanism. Existing local profiles are deliberately not in this package and must never be publicly claimable.
+ 
+-The import package intentionally has no local .env, SQLite records, installed
+-dependencies or screenshots. The original local database is unchanged. A new
+-workspace creates its own synthetic database through normal app operations.
+-Do not reset a database already present in this workspace. Browser-local
+-explorer selections do not transfer between origins.
++For publishing, use scripts/replit-production.sh, managed persistent PostgreSQL DATABASE_URL, and the exact HTTPS CAREERQUEST_PUBLIC_ORIGIN. The launcher disables developer tools and refuses ephemeral SQLite. Preview can derive its HTTPS origin from Replit’s server-provided REPLIT_DEV_DOMAIN. See docs/CLOUD_DEPLOYMENT.md for production configuration, host-only account assignment/reset and verification.
+ 
+-Design source: docs/reference/UI_SPECIFICATION.txt (full specification and
+-source metadata). Current checkpoint: docs/SPEC_INCREMENT_1.md. Dashboard,
+-Discovery Quests and Explorer Profile were implemented and verified locally.
+-Reverify those pages in Replit and report before implementing the remaining
+-pages. Career Worlds, My Roadmap, My Journey and the expanded Agent Activity
+-panel are not yet fully aligned with the specification. Preserve their working
+-behavior. The five-item roadmap is still a deterministic template.
++Preserve Groq (openai/gpt-oss-120b), LangGraph, source validation, XP, profile confirmation, versioned histories, the emerald milestone and graphical portfolio. Local SQLite and Streamlit fallback remain available; do not expose Streamlit publicly. GROQ_API_KEY belongs only in server-side Secrets; never display it, inspect its value or put it in React. No model provider change is requested. Retrieval is curated offline content, not live verified research.
+ 
+-Verification:
+-
+-```sh
+-.venv-replit/bin/python -m pip install httpx
+-.venv-replit/bin/python -m unittest discover -s tests -v
+-.venv-replit/bin/python -m compileall -q careerquest app.py tests scripts
+-PYTHONPATH=. .venv-replit/bin/python scripts/smoke_core.py
+-npm --prefix frontend test
+-npm --prefix frontend run build
+-```
+-
+-After Run, check /api/health and create only a fictional test explorer. Complete
+-quests, verify XP, edit/save/reload/confirm the profile, and check the confirmation
+-gate. Record actual results, failures and skips. Do not change test expectations
+-to hide a failure. No live Groq success is implied by mocked tests.
+-
+-Use restricted preview access; the app has no authentication. Do not publish,
+-send messages, apply, purchase or make other external writes without the
+-separate approval workflow required by AGENTS.md. Keep this as a development
+-preview; no deployment configuration is provided.
++The source ZIP excludes .env, databases, installed dependencies and screenshots. It does not migrate, delete or reset local records. Do not include credentials or working databases in an import archive. Read the deployment doc before publishing and verify storage after a real restart/redeploy.
+--- before/requirements-api.txt
++++ after/requirements-api.txt
+@@ -4,3 +4,5 @@
+ pydantic>=2,<3
+ reportlab>=4.2,<5
+ pypdf>=5,<7
++argon2-cffi>=23.1,<26
++psycopg[binary]>=3.2,<4
+--- before/scripts/account_admin.py
++++ after/scripts/account_admin.py
+@@ -0,0 +1,46 @@
++"""Host-only CLI: assign a login to an existing demo profile, or reset a password.
++
++Passwords are entered privately; never pass them as shell arguments. This CLI
++has no HTTP equivalent. Existing Explorer histories and XP remain untouched.
++"""
++import argparse
++import getpass
++import os
++import sys
++import time
++import uuid
++from pathlib import Path
++sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
++from careerquest import auth
++from careerquest.store import connect
++
++
++def main():
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('action',choices=('assign','reset'))
++    parser.add_argument('--username',required=True)
++    parser.add_argument('--profile-id',help='Existing unassigned demo profile UUID (assign only)')
++    args=parser.parse_args()
++    password=getpass.getpass('New passphrase (15–128 characters): ')
++    if password!=getpass.getpass('Repeat passphrase: '):parser.error('Passphrases do not match')
++    username=auth.credentials(args.username,password)
++    c=connect(os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3'))
++    try:
++        auth.initialize(c)
++        with c:
++            c.execute('BEGIN IMMEDIATE')
++            old=c.execute('SELECT id FROM auth_accounts WHERE username=?',(username,)).fetchone()
++            if args.action=='reset':
++                if not old:parser.error('Account not found')
++                c.execute('UPDATE auth_accounts SET password_hash=? WHERE id=?',(auth.HASHER.hash(password),old['id']))
++                c.execute('DELETE FROM auth_sessions WHERE account_id=?',(old['id'],))
++            else:
++                if old:parser.error('Username already exists')
++                if not args.profile_id or not c.execute('SELECT id FROM profiles WHERE id=?',(args.profile_id,)).fetchone():parser.error('Supply an existing demo profile ID')
++                if c.execute('SELECT id FROM auth_accounts WHERE profile_id=?',(args.profile_id,)).fetchone():parser.error('Profile already has an owner; use reset')
++                c.execute('INSERT INTO auth_accounts VALUES(?,?,?,?,?)',(str(uuid.uuid4()),username,auth.HASHER.hash(password),args.profile_id,time.time()))
++        print('Login updated. No Explorer history or XP changed.')
++    finally:c.close()
++
++
++if __name__=='__main__':main()
+--- before/scripts/package_replit.py
++++ after/scripts/package_replit.py
+@@ -17,6 +17,8 @@
+     'docs/REACT_REPLIT_SETUP.md', 'docs/REPLIT_VERIFICATION.md', 'docs/SPEC_INCREMENT_1.md',
+     'docs/reference/UI_SPECIFICATION.txt',
+     'scripts/replit-setup.sh', 'scripts/replit-run.sh',
++    'scripts/replit-production.sh','scripts/account_admin.py','scripts/verify_postgres.py',
++    'docs/CLOUD_DEPLOYMENT.md',
+     'scripts/package_replit.py', 'scripts/smoke_core.py',
+ )
+ SOURCE_TREES = {
+--- before/scripts/replit-production.sh
++++ after/scripts/replit-production.sh
+@@ -0,0 +1,9 @@
++#!/usr/bin/env bash
++set -euo pipefail
++cd "$(dirname "$0")/.."
++export CAREERQUEST_ENV=production
++export CAREERQUEST_DEV_TOOLS=0
++export CAREERQUEST_HOST=0.0.0.0
++# Startup validates HTTPS origin and persistent PostgreSQL; never fall back to
++# ephemeral SQLite in a published app. Replit terminates HTTPS at its proxy.
++exec bash scripts/replit-run.sh
+--- before/scripts/replit-run.sh
++++ after/scripts/replit-run.sh
+@@ -8,4 +8,4 @@
+ fi
+ # Keep local invocations private; .replit explicitly selects the preview interface.
+ exec "$careerquest_python" -m uvicorn careerquest.api:app \
+-  --host "${CAREERQUEST_HOST:-127.0.0.1}" --port "${PORT:-8000}"
++  --host "${CAREERQUEST_HOST:-127.0.0.1}" --port "${PORT:-8000}" --no-proxy-headers
+--- before/scripts/verify_postgres.py
++++ after/scripts/verify_postgres.py
+@@ -0,0 +1,59 @@
++"""Run the backend suite in isolated PostgreSQL schemas, without migrating data.
++
++Requires CAREERQUEST_TEST_DATABASE_URL pointing to a dedicated test database.
++Random cq_test_* schemas are created and removed; existing tables are untouched.
++"""
++import hashlib
++import os
++from pathlib import Path
++import sys
++import unittest
++import uuid
++import subprocess
++from unittest.mock import patch
++sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
++import psycopg
++from psycopg import sql
++from careerquest import store
++from careerquest.postgres import connect
++
++
++def main():
++    url=os.getenv('CAREERQUEST_TEST_DATABASE_URL')
++    if not url:raise SystemExit('Set CAREERQUEST_TEST_DATABASE_URL for a dedicated test database; no test database was opened')
++    prefix='cq_test_'+uuid.uuid4().hex[:12]+'_'
++    schemas=set()
++    def isolated(path=store.DEFAULT_DB):
++        schema=prefix+hashlib.sha256(str(path).encode()).hexdigest()[:16]
++        if schema not in schemas:
++            with psycopg.connect(url,autocommit=True) as admin:admin.execute(sql.SQL('CREATE SCHEMA IF NOT EXISTS {}').format(sql.Identifier(schema)))
++            schemas.add(schema)
++        return connect(url,store.SCHEMA,schema=schema)
++    store.connect=isolated
++    original_run=subprocess.run
++    def child_run(args,**kwargs):
++        # Existing restart tests pass their fixture DB path to a fresh Python
++        # process. Route that process to the same isolated PostgreSQL schema.
++        if len(args)>4 and args[1]=='-c':
++            schema=prefix+hashlib.sha256(str(args[3]).encode()).hexdigest()[:16]
++            env=dict(kwargs.get('env',os.environ));env['CAREERQUEST_TEST_SCHEMA']=schema
++            prelude="import os; from careerquest import store as _s; from careerquest.postgres import connect as _pg; _s.connect=lambda path=_s.DEFAULT_DB: _pg(os.environ['CAREERQUEST_TEST_DATABASE_URL'],_s.SCHEMA,schema=os.environ['CAREERQUEST_TEST_SCHEMA']); "
++            args=[*args[:2],prelude+args[2],*args[3:]];kwargs['env']=env
++        return original_run(args,**kwargs)
++    try:
++        suite=unittest.defaultTestLoader.discover('tests')
++        if '--pglite' in sys.argv:
++            def limited(group):
++                for item in group:
++                    if isinstance(item,unittest.TestSuite):limited(item)
++                    elif item._testMethodName in ('test_parallel_duplicate_submits_are_atomic','test_one_explorer_per_account_retry_and_parallel_creation_no_xp_or_confirmation'):
++                        setattr(item,item._testMethodName,lambda t=item:t.skipTest('PGlite multiplexes one connection; run concurrency checks on native PostgreSQL'))
++            limited(suite)
++        with patch('subprocess.run',side_effect=child_run):result=unittest.TextTestRunner(verbosity=2).run(suite)
++    finally:
++        with psycopg.connect(url,autocommit=True) as admin:
++            for schema in schemas:admin.execute(sql.SQL('DROP SCHEMA {} CASCADE').format(sql.Identifier(schema)))
++    return 0 if result.wasSuccessful() else 1
++
++
++if __name__=='__main__':raise SystemExit(main())
+--- before/tests/owned_client.py
++++ after/tests/owned_client.py
+@@ -0,0 +1,50 @@
++"""Authenticate existing domain/API regression fixtures through the real login API.
++
++These fixtures previously used public Explorer IDs. Each fixture Explorer now
++gets its own test-only account. Security tests use the unwrapped TestClient.
++"""
++import re
++import threading
++import uuid
++from unittest.mock import patch
++from fastapi.testclient import TestClient as RawClient
++from careerquest import api
++
++_owners={}
++_receipts={}
++_lock=threading.RLock()
++PASSWORD='test-only long passphrase for fixtures'
++
++
++class TestClient(RawClient):
++    __test__=False
++    def __enter__(self):
++        # Legacy tests deliberately vary developer-mode flags, but their storage
++        # remains an isolated SQLite fixture. Cloud config has separate tests.
++        with patch('careerquest.auth.check_configuration'):
++            return super().__enter__()
++    def _new_session(self):
++        response=super().request('POST','/api/auth/register',json={'username':'test_'+uuid.uuid4().hex[:20],'password':PASSWORD,'demo_ack':True},headers={'x-cq-request':'1','cookie':''})
++        if response.status_code!=200:raise AssertionError(f'Fixture registration failed: {response.status_code} {response.text}')
++        return {'cookie':response.cookies.get('cq_session'),'csrf':response.json()['csrf_token'],'created':False}
++    def request(self,method,url,**kwargs):
++        path=str(url);match=re.search(r'/profiles/([^/]+)',path)
++        if '/api/auth/' in path:return super().request(method,url,**kwargs)
++        with _lock:
++            current=getattr(self,'owner',None)
++            if method.upper()=='POST' and path=='/api/profiles':
++                body=kwargs.get('json') or {};key=body.get('creation_key')
++                current=_receipts.get((api.DB,key)) if key else (current if current and not current['created'] else None)
++                if not current:current=self._new_session()
++                if key:_receipts[(api.DB,key)]=current
++            elif match:current=_owners.get((api.DB,match.group(1)),current)
++            if not current:current=self._new_session()
++            self.owner=current
++        headers=dict(kwargs.pop('headers',{}) or {})
++        headers.update({'x-csrf-token':current['csrf'],'x-cq-request':'1','cookie':'cq_session='+current['cookie']})
++        response=super().request(method,url,headers=headers,**kwargs)
++        if method.upper()=='POST' and path=='/api/profiles' and response.status_code==200:
++            with _lock:
++                current['created']=True
++                _owners[(api.DB,response.json()['profile']['id'])]=current
++        return response
+--- before/tests/test_adventure_home.py
++++ after/tests/test_adventure_home.py
+@@ -3,7 +3,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.store import connect
+ 
+--- before/tests/test_api.py
++++ after/tests/test_api.py
+@@ -1,7 +1,7 @@
+ import os,tempfile,unittest
+ from unittest.mock import patch
+ from pathlib import Path
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ class APITests(unittest.TestCase):
+  def setUp(self):
+--- before/tests/test_auth.py
++++ after/tests/test_auth.py
+@@ -0,0 +1,122 @@
++import os
++import tempfile
++import time
++import unittest
++import uuid
++from concurrent.futures import ThreadPoolExecutor
++from pathlib import Path
++from unittest.mock import patch
++
++from fastapi.testclient import TestClient
++from careerquest import api,auth
++from careerquest.store import connect,create_profile
++
++PASSWORD='Demo passphrase with curiosity 42'
++
++
++class AuthenticationTests(unittest.TestCase):
++    def setUp(self):
++        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
++        self.path=str(Path(self.tmp.name)/'isolated.sqlite3')
++        db=patch.object(api,'DB',self.path);db.start();self.addCleanup(db.stop)
++        env=patch.dict(os.environ,{'CAREERQUEST_ENV':'local','CAREERQUEST_PUBLIC_ORIGIN':'','DATABASE_URL':'','REPLIT_DEPLOYMENT':'0','CAREERQUEST_DEV_TOOLS':'0'});env.start();self.addCleanup(env.stop)
++        self.c=self.client()
++    def client(self):
++        c=TestClient(api.app,base_url='http://127.0.0.1',client=('127.0.0.1',45000));self.addCleanup(c.close);return c
++    def register(self,c=None,username='demo_alias'):
++        c=c or self.c
++        r=c.post('/api/auth/register',json={'username':username,'password':PASSWORD,'demo_ack':True},headers={'x-cq-request':'1'})
++        self.assertEqual(r.status_code,200,r.text);c.headers['x-csrf-token']=r.json()['csrf_token'];return r
++    def create(self,c=None):
++        c=c or self.c
++        r=c.post('/api/profiles',json={'alias':'Orbit Alias','grade':11,'fictional_ack':True,'creation_key':str(uuid.uuid4())})
++        self.assertEqual(r.status_code,200,r.text);return r.json()
++    def test_registration_hashes_password_and_cookie_holds_only_random_session(self):
++        response=self.register();self.assertNotIn(PASSWORD,response.text)
++        cookie=response.headers['set-cookie'];self.assertIn('HttpOnly',cookie);self.assertIn('SameSite=strict',cookie)
++        with connect(self.path) as c:
++            row=c.execute('SELECT * FROM auth_accounts').fetchone();self.assertTrue(row['password_hash'].startswith('$argon2id$'))
++            self.assertTrue(auth.HASHER.verify(row['password_hash'],PASSWORD))
++            session=c.execute('SELECT * FROM auth_sessions').fetchone();self.assertNotEqual(session['token_hash'],self.c.cookies.get(auth.COOKIE))
++        self.assertTrue(self.c.get('/api/auth/session').json()['authenticated'])
++    def test_all_profile_routes_and_pdf_are_private_without_a_session(self):
++        for route in api.app.routes:
++            path=getattr(route,'path','')
++            if '/api/profiles' not in path:continue
++            path=path.replace('{pid}','unknown').replace('{step}','0').replace('{sid}','story').replace('{wid}','software').replace('{eid}','research').replace('{mid}','milestone').replace('{cid}','portfolio')
++            for method in route.methods-{'HEAD','OPTIONS'}:
++                self.assertEqual(self.c.request(method,path,json={} if method=='POST' else None).status_code,401,(method,path))
++    def test_one_explorer_per_account_retry_and_parallel_creation_no_xp_or_confirmation(self):
++        self.register();body={'alias':'Orbit Alias','grade':11,'fictional_ack':True}
++        with ThreadPoolExecutor(max_workers=5) as pool:replies=list(pool.map(lambda _:self.c.post('/api/profiles',json=body),range(5)))
++        self.assertTrue(all(r.status_code==200 for r in replies));self.assertEqual(len({r.json()['profile']['id'] for r in replies}),1)
++        state=replies[0].json();self.assertEqual(state['profile']['xp'],0);self.assertEqual(state['events'],[]);self.assertFalse(state['confirmed'])
++        self.assertEqual(self.c.post('/api/profiles',json=body|{'alias':'Another Alias'}).status_code,409)
++    def test_cross_account_read_write_pdf_and_legacy_routes_return_404(self):
++        self.register();pid=self.create()['profile']['id'];other=self.client();self.register(other,'other_alias')
++        for suffix,method,body in [('', 'GET',None),('/quests/0','POST',{'option':'Build a mini-app'}),('/confirm','POST',{}),('/explore','POST',{'message':'Explore careers'}),('/career-discovery','GET',None),('/career-portfolio/versions/one/pdf','GET',None)]:
++            self.assertEqual(other.request(method,'/api/profiles/'+pid+suffix,json=body).status_code,404)
++        self.assertEqual(other.get('/api/profiles').status_code,404)
++    def test_legacy_profiles_cannot_be_claimed_through_registration_or_creation_keys(self):
++        with connect(self.path) as c:pid=create_profile(c,'Existing Alias',12,request_key='existing-key')
++        self.register();self.assertEqual(self.c.get('/api/profiles/'+pid).status_code,404)
++        r=self.c.post('/api/auth/register',json={'username':'claim_attempt','password':PASSWORD,'demo_ack':True,'profile_id':pid},headers={'x-cq-request':'1'})
++        self.assertEqual(r.status_code,422);self.assertNotIn(PASSWORD,r.text)
++        self.assertNotEqual(self.create()['profile']['id'],pid)
++    def test_logout_revokes_session_and_login_restores_progress_after_restart(self):
++        self.register();state=self.create();pid=state['profile']['id'];base='/api/profiles/'+pid
++        self.assertEqual(self.c.post(base+'/quests/0',json={'option':next(iter(api.QUESTS[0]['options']))}).status_code,200)
++        old_token=self.c.cookies.get(auth.COOKIE);self.assertEqual(self.c.post('/api/auth/logout',json={}).status_code,200)
++        self.assertEqual(self.c.get(base,headers={'cookie':'cq_session='+old_token}).status_code,401)
++        fresh=self.client();r=fresh.post('/api/auth/login',json={'username':' DEMO_ALIAS ','password':PASSWORD},headers={'x-cq-request':'1'})
++        self.assertEqual(r.status_code,200);self.assertEqual(r.json()['account']['profile_id'],pid)
++        self.assertNotEqual(fresh.cookies.get(auth.COOKIE),old_token)
++        saved=fresh.get(base).json();self.assertEqual(saved['quest_count'],1);self.assertEqual(saved['profile']['xp'],20)
++        fresh.headers['x-csrf-token']=r.json()['csrf_token'];self.assertEqual(fresh.post(base+'/quests/0',json={'option':next(iter(api.QUESTS[0]['options']))}).status_code,409)
++    def test_session_expiry_and_csrf_origin_guards(self):
++        self.register();pid=self.create()['profile']['id']
++        self.assertEqual(self.c.post('/api/auth/logout',json={},headers={'x-csrf-token':''}).status_code,403)
++        self.assertEqual(self.c.post('/api/auth/logout',json={},headers={'origin':'https://evil.example'}).status_code,403)
++        self.assertEqual(self.c.get('/api/profiles/'+pid,headers={'sec-fetch-site':'cross-site'}).status_code,403)
++        with connect(self.path) as c:c.execute('UPDATE auth_sessions SET expires_at=?',(time.time()-1,))
++        self.assertEqual(self.c.get('/api/profiles/'+pid).status_code,401)
++    def test_login_errors_are_generic_and_limited_across_clients(self):
++        self.register()
++        for username in ('demo_alias','does_not_exist'):
++            r=self.c.post('/api/auth/login',json={'username':username,'password':'wrong'},headers={'x-cq-request':'1'})
++            self.assertEqual(r.status_code,401);self.assertEqual(r.json()['detail'],'Username or password is incorrect')
++        fresh=self.client()
++        for _ in range(9):fresh.post('/api/auth/login',json={'username':'does_not_exist','password':'wrong'},headers={'x-cq-request':'1'})
++        self.assertEqual(fresh.post('/api/auth/login',json={'username':'does_not_exist','password':'wrong'},headers={'x-cq-request':'1'}).status_code,429)
++    def test_validation_does_not_echo_password_and_signup_requires_acknowledgment(self):
++        for body in ({'username':'x','password':PASSWORD,'demo_ack':True},{'username':'valid_alias','password':'short','demo_ack':True},{'username':'valid_alias','password':PASSWORD,'demo_ack':False},{'username':'valid_alias','password':PASSWORD,'unexpected':PASSWORD}):
++            r=self.c.post('/api/auth/register',json=body,headers={'x-cq-request':'1'});self.assertEqual(r.status_code,422);self.assertNotIn(PASSWORD,r.text)
++        self.assertEqual(self.c.post('/api/auth/register',json={'username':'valid_alias','password':PASSWORD,'demo_ack':True}).status_code,403)
++    def test_public_configuration_fails_closed_and_secure_cookie_is_used(self):
++        with patch.dict(os.environ,{'CAREERQUEST_ENV':'production'}):
++            with self.assertRaises(RuntimeError):auth.check_configuration()
++        with patch.dict(os.environ,{'CAREERQUEST_PUBLIC_ORIGIN':'https://demo.example','CAREERQUEST_ENV':'production'}):
++            with self.assertRaises(RuntimeError):auth.check_configuration()
++        with patch.dict(os.environ,{'CAREERQUEST_PUBLIC_ORIGIN':'https://demo.example'}):
++            c=TestClient(api.app,base_url='https://demo.example');self.addCleanup(c.close)
++            r=self.register(c);self.assertIn('Secure',r.headers['set-cookie']);self.assertIn('max-age=',r.headers['strict-transport-security'])
++            self.assertEqual(c.get('/api/auth/session',headers={'host':'evil.example'}).status_code,400)
++    def test_unconfirmed_account_cannot_bypass_personalization_gates(self):
++        self.register();base='/api/profiles/'+self.create()['profile']['id']
++        for suffix,body in [('/worlds/software/explore',{}),('/roadmap/propose',{}),('/confirm',{'interests':['science']})]:self.assertEqual(self.c.post(base+suffix,json=body).status_code,409)
++    def test_host_assignment_and_reset_keep_history_and_revoke_sessions(self):
++        from scripts.account_admin import main
++        with connect(self.path) as c:
++            auth.initialize(c);pid=create_profile(c,'Existing Alias',10)
++        with patch.dict(os.environ,{'CAREERQUEST_DB':self.path}),patch('getpass.getpass',return_value=PASSWORD),patch('sys.argv',['account_admin.py','assign','--username','host_assigned','--profile-id',pid]):main()
++        r=self.c.post('/api/auth/login',json={'username':'host_assigned','password':PASSWORD},headers={'x-cq-request':'1'});self.assertEqual(r.status_code,200)
++        self.assertEqual(r.json()['account']['profile_id'],pid);before=self.c.get('/api/profiles/'+pid).json()
++        with patch.dict(os.environ,{'CAREERQUEST_DB':self.path}),patch('getpass.getpass',return_value='Replacement demo passphrase 99'),patch('sys.argv',['account_admin.py','reset','--username','host_assigned']):main()
++        self.assertEqual(self.c.get('/api/profiles/'+pid).status_code,401)
++        r=self.c.post('/api/auth/login',json={'username':'host_assigned','password':'Replacement demo passphrase 99'},headers={'x-cq-request':'1'});self.assertEqual(r.status_code,200)
++        self.assertEqual(self.c.get('/api/profiles/'+pid).json(),before)
++    def test_chunked_or_oversized_requests_are_rejected_before_processing(self):
++        response=self.c.post('/api/auth/login',content=iter([b'x'*40000,b'y'*40000]),headers={'x-cq-request':'1','content-type':'application/json'})
++        self.assertEqual(response.status_code,413)
++        for value in ('invalid','-1'):
++            self.assertEqual(self.c.post('/api/auth/login',content=b'{}',headers={'content-length':value,'x-cq-request':'1'}).status_code,400)
+--- before/tests/test_career_celebrations.py
++++ after/tests/test_career_celebrations.py
+@@ -7,7 +7,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api,career_worlds
+ from careerquest.store import connect
+ 
+--- before/tests/test_career_discovery_milestone.py
++++ after/tests/test_career_discovery_milestone.py
+@@ -4,7 +4,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.store import connect
+ 
+--- before/tests/test_career_recommendations_paths.py
++++ after/tests/test_career_recommendations_paths.py
+@@ -7,7 +7,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api,career_worlds
+ from careerquest.store import connect
+ 
+--- before/tests/test_career_worlds.py
++++ after/tests/test_career_worlds.py
+@@ -8,7 +8,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, agent, career_worlds as worlds
+ from careerquest.store import connect
+ 
+--- before/tests/test_developer_research.py
++++ after/tests/test_developer_research.py
+@@ -5,7 +5,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.store import connect
+ 
+--- before/tests/test_discovery_agent.py
++++ after/tests/test_discovery_agent.py
+@@ -8,7 +8,7 @@
+ from pathlib import Path
+ from unittest.mock import patch
+ from urllib.error import HTTPError
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, discovery_agent as agent, discovery_guide as guide
+ from careerquest.store import connect
+ 
+--- before/tests/test_discovery_feedback_workflow.py
++++ after/tests/test_discovery_feedback_workflow.py
+@@ -6,7 +6,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, discovery_guide as guide
+ from careerquest.store import connect
+ 
+--- before/tests/test_discovery_flow.py
++++ after/tests/test_discovery_flow.py
+@@ -4,7 +4,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.discovery import discovery_state
+ from careerquest.store import connect
+--- before/tests/test_discovery_guide.py
++++ after/tests/test_discovery_guide.py
+@@ -6,7 +6,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, discovery_guide as guide
+ from careerquest.store import connect
+ 
+--- before/tests/test_discovery_handoff.py
++++ after/tests/test_discovery_handoff.py
+@@ -11,7 +11,7 @@
+ from pathlib import Path
+ from unittest.mock import patch
+ 
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, discovery_guide as guide
+ from careerquest.store import connect
+ 
+--- before/tests/test_explorer_setup.py
++++ after/tests/test_explorer_setup.py
+@@ -3,7 +3,7 @@
+ from concurrent.futures import ThreadPoolExecutor
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.store import connect
+ 
+--- before/tests/test_portfolio_flow.py
++++ after/tests/test_portfolio_flow.py
+@@ -8,7 +8,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from pypdf import PdfReader
+ from careerquest import api, career_worlds
+ from careerquest.store import connect
+--- before/tests/test_profile_review_flow.py
++++ after/tests/test_profile_review_flow.py
+@@ -7,7 +7,7 @@
+ from pathlib import Path
+ from unittest.mock import patch
+ 
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api, discovery_guide as guide
+ from careerquest.store import connect
+ 
+--- before/tests/test_welcome_flow.py
++++ after/tests/test_welcome_flow.py
+@@ -3,7 +3,7 @@
+ import unittest
+ from pathlib import Path
+ from unittest.mock import patch
+-from fastapi.testclient import TestClient
++from owned_client import TestClient
+ from careerquest import api
+ from careerquest.store import connect
+ 

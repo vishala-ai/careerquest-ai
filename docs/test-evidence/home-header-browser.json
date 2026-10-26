@@ -1,0 +1,146 @@
+{
+  "synthetic_only": true,
+  "states": [
+    {
+      "phase": "partial",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 20,
+      "quests": 1,
+      "confirmed": false,
+      "shortlist": 0,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "discovered",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 60,
+      "quests": 3,
+      "confirmed": false,
+      "shortlist": 0,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "confirmed",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": true,
+      "shortlist": 0,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "research",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": true,
+      "shortlist": 0,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "ready",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": true,
+      "shortlist": 1,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "inspect",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": true,
+      "shortlist": 1,
+      "portfolio_versions": 0,
+      "active_portfolio": false
+    },
+    {
+      "phase": "saved",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": true,
+      "shortlist": 1,
+      "portfolio_versions": 1,
+      "active_portfolio": true
+    },
+    {
+      "phase": "changed",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": false,
+      "shortlist": 1,
+      "portfolio_versions": 1,
+      "active_portfolio": false
+    },
+    {
+      "phase": "inspect",
+      "pid": "4efa1c00-5c4d-4c40-8742-79f0bec1f16e",
+      "xp": 70,
+      "quests": 3,
+      "confirmed": false,
+      "shortlist": 1,
+      "portfolio_versions": 1,
+      "active_portfolio": false
+    }
+  ],
+  "measured_css_widths": [
+    390,
+    768,
+    1440
+  ],
+  "horizontal_overflow": false,
+  "desktop_heading_px": 38,
+  "mobile_heading_px": 30,
+  "mobile_body_px": 17,
+  "mobile_primary_target_height_px": 51.5,
+  "one_global_nav": true,
+  "completed_stages": 4,
+  "completed_recommendations": 0,
+  "completed_primary_actions": 1,
+  "zoom": {
+    "native_chrome_label": "Zoom: 200%",
+    "physical_override": [
+      1440,
+      1000
+    ],
+    "measured_css_viewport": [
+      720,
+      500
+    ],
+    "horizontal_overflow": false,
+    "short_viewport_header": "relative",
+    "keyboard_target_bounds": [
+      349.015625,
+      429.015625
+    ],
+    "restored_to_100_percent": true
+  },
+  "scroll": {
+    "native_sticky_xp_click_before": 715,
+    "after": 715,
+    "header_top": 0
+  },
+  "browser_back_forward": "Existing document history exercised: Back reached prior test origin; Forward restored Quest 2 via browser cache. Internal page buttons still use existing state routes.",
+  "reduced_motion": "Loaded CSSOM reduce rules and no-motion/focus/color tests passed; actual OS preference not activated.",
+  "console_errors": [],
+  "unconfirmed_research_http": 409,
+  "xp_after_navigation": 70,
+  "portfolio_versions_after_navigation": 1,
+  "normal_database_unchanged": true,
+  "protected_source_files_unchanged": 22,
+  "normal_health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "browser_cleanup": "Zoom restored; viewport override reset; both test tabs closed."
+}

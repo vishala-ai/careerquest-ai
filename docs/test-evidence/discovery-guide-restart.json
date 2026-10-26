@@ -1,0 +1,15 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "original_records_unchanged": true,
+  "counts": {
+    "profiles": 5,
+    "events": 40,
+    "plans": 7,
+    "runs": 42
+  },
+  "additive_schema": true
+}

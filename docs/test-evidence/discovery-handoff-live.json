@@ -1,0 +1,43 @@
+{
+  "check": "LIVE Groq Discovery outcome and confirmed handoff",
+  "model_responses_mocked": false,
+  "status": "passed",
+  "model": "openai/gpt-oss-120b",
+  "generation_status": "groq",
+  "live_model_decisions": 2,
+  "actions": [
+    {
+      "action": "revise_discovery_story",
+      "method": "groq",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "action": "suggest_career_worlds",
+      "method": "groq",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "action": "request_profile_review",
+      "method": "bounded_policy",
+      "status": "completed",
+      "error": null
+    }
+  ],
+  "engine": "langgraph",
+  "fallback_used": false,
+  "story_word_count": 90,
+  "handoff_version": 1,
+  "profile_version": 1,
+  "world_ids": [
+    "bioengineering",
+    "software",
+    "design"
+  ],
+  "confirmation_gate": 409,
+  "quest_answers_unchanged": true,
+  "xp": 70,
+  "idempotent_confirmation": true,
+  "database": "temporary fictional SQLite; normal database untouched"
+}

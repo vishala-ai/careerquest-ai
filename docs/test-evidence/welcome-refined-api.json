@@ -1,0 +1,12 @@
+{
+  "fictional_profile_id": "a73e146f-956b-4eaf-ad9d-432c2ecb5228",
+  "xp_after_replay": 70,
+  "quest_count": 3,
+  "research_count": 1,
+  "roadmap_version": 1,
+  "edited_profile_gate_statuses": {
+    "/explore": 409,
+    "/roadmap/propose": 409,
+    "/roadmap/save": 409
+  }
+}

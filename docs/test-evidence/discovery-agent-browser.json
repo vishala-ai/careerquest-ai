@@ -1,0 +1,70 @@
+{
+  "check": "Browser walkthrough with Groq disabled; bounded fallback, not live inference",
+  "session_count": 3,
+  "turn_count": 5,
+  "story_versions": 2,
+  "tool_trace": [
+    {
+      "action": "revise_discovery_story",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "suggest_career_worlds",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "request_profile_review",
+      "method": "bounded_policy",
+      "status": "completed"
+    },
+    {
+      "action": "ask_clarifying_question",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "ask_clarifying_question",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "revise_discovery_story",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "suggest_career_worlds",
+      "method": "bounded_policy_fallback",
+      "status": "completed"
+    },
+    {
+      "action": "request_profile_review",
+      "method": "bounded_policy",
+      "status": "completed"
+    },
+    {
+      "action": "request_profile_review",
+      "method": "bounded_policy",
+      "status": "completed"
+    }
+  ],
+  "clarification_count": 2,
+  "reload_restored_pending_question": true,
+  "raw_quest_completions": 3,
+  "choice_ids_preserved_all_sessions": true,
+  "quest_xp": 60,
+  "total_xp": 60,
+  "confirmed": false,
+  "draft_interests": [
+    "design"
+  ],
+  "positive_feedback_preserved_recommendation_ids": [
+    "design"
+  ],
+  "gates": {
+    "/roadmap/propose": 409,
+    "/explore": 409
+  }
+}

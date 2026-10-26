@@ -1,0 +1,1130 @@
+
+> careerquest-ui@0.2.0 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: all Adventure Home mission transitions follow backend state
+ok 1 - all Adventure Home mission transitions follow backend state
+  ---
+  duration_ms: 2.333292
+  type: 'test'
+  ...
+# Subtest: saved roadmap leads to My Journey even without earlier career research
+ok 2 - saved roadmap leads to My Journey even without earlier career research
+  ---
+  duration_ms: 0.367833
+  type: 'test'
+  ...
+# Subtest: new visitor and missing, blank or whitespace nickname use a neutral greeting
+ok 3 - new visitor and missing, blank or whitespace nickname use a neutral greeting
+  ---
+  duration_ms: 1.601875
+  type: 'test'
+  ...
+# Subtest: returning explorer resumes the first incomplete quest from saved count
+ok 4 - returning explorer resumes the first incomplete quest from saved count
+  ---
+  duration_ms: 0.143792
+  type: 'test'
+  ...
+# Subtest: read-only home and revisits do not mutate backend progress or grant XP
+ok 5 - read-only home and revisits do not mutate backend progress or grant XP
+  ---
+  duration_ms: 0.844167
+  type: 'test'
+  ...
+# Subtest: an edited profile locks personalized map steps despite saved historical work
+ok 6 - an edited profile locks personalized map steps despite saved historical work
+  ---
+  duration_ms: 0.093333
+  type: 'test'
+  ...
+# Subtest: failed research never counts as saved exploration, and proposals are not saved roadmaps
+ok 7 - failed research never counts as saved exploration, and proposals are not saved roadmaps
+  ---
+  duration_ms: 0.061041
+  type: 'test'
+  ...
+# Subtest: first shortlist celebration uses saved nickname and the actual selected career
+ok 8 - first shortlist celebration uses saved nickname and the actual selected career
+  ---
+  duration_ms: 2.876125
+  type: 'test'
+  ...
+# Subtest: six distinct milestones have supportive and contextual next actions with no invented rewards
+ok 9 - six distinct milestones have supportive and contextual next actions with no invented rewards
+  ---
+  duration_ms: 0.904875
+  type: 'test'
+  ...
+# Subtest: celebration is a polite nonmodal status with keyboard-native controls and persistent dismissal
+ok 10 - celebration is a polite nonmodal status with keyboard-native controls and persistent dismissal
+  ---
+  duration_ms: 0.613417
+  type: 'test'
+  ...
+# Subtest: largest celebration is reserved for portfolio completion and unknown kinds render nothing
+ok 11 - largest celebration is reserved for portfolio completion and unknown kinds render nothing
+  ---
+  duration_ms: 0.678542
+  type: 'test'
+  ...
+# Subtest: nickname fallback and escaped text remain safe and student friendly
+ok 12 - nickname fallback and escaped text remain safe and student friendly
+  ---
+  duration_ms: 0.3855
+  type: 'test'
+  ...
+# Subtest: reduced-motion styling disables motion and animation is opt-in to no-preference
+ok 13 - reduced-motion styling disables motion and animation is opt-in to no-preference
+  ---
+  duration_ms: 8.654959
+  type: 'test'
+  ...
+# Subtest: portfolio completion is explicit after review and secondary remains optional
+ok 14 - portfolio completion is explicit after review and secondary remains optional
+  ---
+  duration_ms: 0.850625
+  type: 'test'
+  ...
+# Subtest: student page uses persisted claim and acknowledgement APIs instead of local reward flags
+ok 15 - student page uses persisted claim and acknowledgement APIs instead of local reward flags
+  ---
+  duration_ms: 1.265083
+  type: 'test'
+  ...
+# Subtest: eligible screen has personalized emerald adventure copy and exact persisted counts
+ok 16 - eligible screen has personalized emerald adventure copy and exact persisted counts
+  ---
+  duration_ms: 15.316375
+  type: 'test'
+  ...
+# Subtest: new and anonymous students have honest setup states and no earned achievement claim
+ok 17 - new and anonymous students have honest setup states and no earned achievement claim
+  ---
+  duration_ms: 9.482667
+  type: 'test'
+  ...
+# Subtest: one or multiple saved careers are never padded to a fabricated achievement
+ok 18 - one or multiple saved careers are never padded to a fabricated achievement
+  ---
+  duration_ms: 4.564833
+  type: 'test'
+  ...
+# Subtest: missing nickname and returning portfolio use fallback and preserve revision wording
+ok 19 - missing nickname and returning portfolio use fallback and preserve revision wording
+  ---
+  duration_ms: 2.742583
+  type: 'test'
+  ...
+# Subtest: stale profile presents confirmation recovery and blocked primary entry
+ok 20 - stale profile presents confirmation recovery and blocked primary entry
+  ---
+  duration_ms: 0.74625
+  type: 'test'
+  ...
+# Subtest: accessible native actions, labeled progress, loading and retry are present
+ok 21 - accessible native actions, labeled progress, loading and retry are present
+  ---
+  duration_ms: 10.210584
+  type: 'test'
+  ...
+# Subtest: screen only reads state and server-checks entry, never saves or claims rewards
+ok 22 - screen only reads state and server-checks entry, never saves or claims rewards
+  ---
+  duration_ms: 33.408125
+  type: 'test'
+  ...
+# Subtest: motion is opt-in, suppressed for returning students, and disabled for reduced motion
+ok 23 - motion is opt-in, suppressed for returning students, and disabled for reduced motion
+  ---
+  duration_ms: 2.392834
+  type: 'test'
+  ...
+# Subtest: primary text and white-card contrast exceed WCAG normal-text minimum
+ok 24 - primary text and white-card contrast exceed WCAG normal-text minimum
+  ---
+  duration_ms: 4.405333
+  type: 'test'
+  ...
+# Subtest: portfolio map uses saved interests careers and explicit paths without assigning a path
+ok 25 - portfolio map uses saved interests careers and explicit paths without assigning a path
+  ---
+  duration_ms: 0.529166
+  type: 'test'
+  ...
+# Subtest: landing starts with three recommendation cards and Why suggested before other careers
+ok 26 - landing starts with three recommendation cards and Why suggested before other careers
+  ---
+  duration_ms: 20.302458
+  type: 'test'
+  ...
+# Subtest: one two and zero matches show only supported recommendations and all other careers
+ok 27 - one two and zero matches show only supported recommendations and all other careers
+  ---
+  duration_ms: 5.127791
+  type: 'test'
+  ...
+# Subtest: three comparison controls are available outside optional AI questions
+ok 28 - three comparison controls are available outside optional AI questions
+  ---
+  duration_ms: 0.759416
+  type: 'test'
+  ...
+# Subtest: comparison table uses cited activities skills and fields for all three worlds
+ok 29 - comparison table uses cited activities skills and fields for all three worlds
+  ---
+  duration_ms: 1.06625
+  type: 'test'
+  ...
+# Subtest: path controls never auto-assign a career and secondary is optional
+ok 30 - path controls never auto-assign a career and secondary is optional
+  ---
+  duration_ms: 4.769917
+  type: 'test'
+  ...
+# Subtest: stale and unsaved careers cannot become new paths in student UI
+ok 31 - stale and unsaved careers cannot become new paths in student UI
+  ---
+  duration_ms: 0.421042
+  type: 'test'
+  ...
+# Subtest: saved path summary and historical profile versions remain visible
+ok 32 - saved path summary and historical profile versions remain visible
+  ---
+  duration_ms: 12.593958
+  type: 'test'
+  ...
+# Subtest: top navigation remounts Career Worlds and details are only explicit local actions
+ok 33 - top navigation remounts Career Worlds and details are only explicit local actions
+  ---
+  duration_ms: 5.809625
+  type: 'test'
+  ...
+# Subtest: all supported world cards have an explicit stable-world action
+ok 34 - all supported world cards have an explicit stable-world action
+  ---
+  duration_ms: 11.622083
+  type: 'test'
+  ...
+# Subtest: student guide is collapsed and has no developer controls, raw receipts or prefilled prompt
+ok 35 - student guide is collapsed and has no developer controls, raw receipts or prefilled prompt
+  ---
+  duration_ms: 2.320792
+  type: 'test'
+  ...
+# Subtest: one next-step action uses the server-supplied persisted-selection state
+ok 36 - one next-step action uses the server-supplied persisted-selection state
+  ---
+  duration_ms: 6.391791
+  type: 'test'
+  ...
+# Subtest: unconfirmed student can browse all worlds but cannot submit personalized questions
+ok 37 - unconfirmed student can browse all worlds but cannot submit personalized questions
+  ---
+  duration_ms: 13.526333
+  type: 'test'
+  ...
+# Subtest: empty portfolio is explicit and never implies automatic shortlist saving
+ok 38 - empty portfolio is explicit and never implies automatic shortlist saving
+  ---
+  duration_ms: 3.795125
+  type: 'test'
+  ...
+# Subtest: career details expose cited sections, educational boundary and optional demo mission
+ok 39 - career details expose cited sections, educational boundary and optional demo mission
+  ---
+  duration_ms: 1.666875
+  type: 'test'
+  ...
+# Subtest: saved detail has an idempotent disabled save control
+ok 40 - saved detail has an idempotent disabled save control
+  ---
+  duration_ms: 0.457291
+  type: 'test'
+  ...
+# Subtest: developer controls are not mounted before server authorization
+ok 41 - developer controls are not mounted before server authorization
+  ---
+  duration_ms: 6.176875
+  type: 'test'
+  ...
+# Subtest: developer receipt distinguishes deterministic routing, actual Groq model and bounded failures
+ok 42 - developer receipt distinguishes deterministic routing, actual Groq model and bounded failures
+  ---
+  duration_ms: 1.494834
+  type: 'test'
+  ...
+# Subtest: student source cannot send tester flags or render raw receipts and developer view uses protected APIs
+ok 43 - student source cannot send tester flags or render raw receipts and developer view uses protected APIs
+  ---
+  duration_ms: 3.887208
+  type: 'test'
+  ...
+# Subtest: saved clarifying question restores selected interests and manual agency
+ok 44 - saved clarifying question restores selected interests and manual agency
+  ---
+  duration_ms: 5.772625
+  type: 'test'
+  ...
+# Subtest: correction clarification is required and bounded
+ok 45 - correction clarification is required and bounded
+  ---
+  duration_ms: 0.332125
+  type: 'test'
+  ...
+# Subtest: fallback and model-directed decisions are distinguished without claiming profile confirmation
+ok 46 - fallback and model-directed decisions are distinguished without claiming profile confirmation
+  ---
+  duration_ms: 0.298333
+  type: 'test'
+  ...
+# Subtest: stale sessions hide old questions and label the archive
+ok 47 - stale sessions hide old questions and label the archive
+  ---
+  duration_ms: 0.109667
+  type: 'test'
+  ...
+# Subtest: agent recommendations project only onto the matching fresh story without mutation
+ok 48 - agent recommendations project only onto the matching fresh story without mutation
+  ---
+  duration_ms: 0.165959
+  type: 'test'
+  ...
+# Subtest: missing LangGraph is labeled and manual review remains available after tool failure
+ok 49 - missing LangGraph is labeled and manual review remains available after tool failure
+  ---
+  duration_ms: 0.1565
+  type: 'test'
+  ...
+# Subtest: explicit edit prefills the saved answer; cancelling a changed draft restores the persisted choice
+ok 50 - explicit edit prefills the saved answer; cancelling a changed draft restores the persisted choice
+  ---
+  duration_ms: 1.327417
+  type: 'test'
+  ...
+# Subtest: a successful save clears only the local draft; the next rendered answer is the backend response
+ok 51 - a successful save clears only the local draft; the next rendered answer is the backend response
+  ---
+  duration_ms: 0.273583
+  type: 'test'
+  ...
+# Subtest: quest story keeps grounded content and technical details without profile feedback
+ok 52 - quest story keeps grounded content and technical details without profile feedback
+  ---
+  duration_ms: 31.73825
+  type: 'test'
+  ...
+# Subtest: fallback has explicit deterministic labeling and a Groq retry
+ok 53 - fallback has explicit deterministic labeling and a Groq retry
+  ---
+  duration_ms: 0.531375
+  type: 'test'
+  ...
+# Subtest: changed response version withholds stale story and feedback from current guide
+ok 54 - changed response version withholds stale story and feedback from current guide
+  ---
+  duration_ms: 0.193875
+  type: 'test'
+  ...
+# Subtest: feedback is restored and escaped from backend data
+ok 55 - feedback is restored and escaped from backend data
+  ---
+  duration_ms: 2.375042
+  type: 'test'
+  ...
+# Subtest: refined story has nickname heading and a 70–110 word summary with technical details collapsed
+ok 56 - refined story has nickname heading and a 70–110 word summary with technical details collapsed
+  ---
+  duration_ms: 1.643375
+  type: 'test'
+  ...
+# Subtest: Somewhat requires a correction and lets students keep agreed clues
+ok 57 - Somewhat requires a correction and lets students keep agreed clues
+  ---
+  duration_ms: 1.736917
+  type: 'test'
+  ...
+# Subtest: Not really asks for preferred interests without retaining original inferences
+ok 58 - Not really asks for preferred interests without retaining original inferences
+  ---
+  duration_ms: 0.627875
+  type: 'test'
+  ...
+# Subtest: Yes offers the single explicit confirmation action on profile review
+ok 59 - Yes offers the single explicit confirmation action on profile review
+  ---
+  duration_ms: 0.29025
+  type: 'test'
+  ...
+# Subtest: mixed provenance clearly labels catalogue fallback suggestions outside technical details
+ok 60 - mixed provenance clearly labels catalogue fallback suggestions outside technical details
+  ---
+  duration_ms: 0.628083
+  type: 'test'
+  ...
+# Subtest: revised proposal shows changes and manual editing remains available after the revision cap
+ok 61 - revised proposal shows changes and manual editing remains available after the revision cap
+  ---
+  duration_ms: 1.1125
+  type: 'test'
+  ...
+# Subtest: editable proposal shows authoritative corrections without a confirmation control
+ok 62 - editable proposal shows authoritative corrections without a confirmation control
+  ---
+  duration_ms: 5.693416
+  type: 'test'
+  ...
+# Subtest: personalized worlds cite the confirmed version while other worlds stay accessible
+ok 63 - personalized worlds cite the confirmed version while other worlds stay accessible
+  ---
+  duration_ms: 40.160791
+  type: 'test'
+  ...
+# Subtest: unconfirmed profile with archived handoff hides personalized content but allows catalogue browsing
+ok 64 - unconfirmed profile with archived handoff hides personalized content but allows catalogue browsing
+  ---
+  duration_ms: 0.264208
+  type: 'test'
+  ...
+# Subtest: uncertain students can explore without a forced career
+ok 65 - uncertain students can explore without a forced career
+  ---
+  duration_ms: 0.354458
+  type: 'test'
+  ...
+# Subtest: empty catalogue and legacy handoff have honest review and unavailable states
+ok 66 - empty catalogue and legacy handoff have honest review and unavailable states
+  ---
+  duration_ms: 0.13425
+  type: 'test'
+  ...
+# Subtest: new and partial explorers derive the first incomplete quest from persisted answers
+ok 67 - new and partial explorers derive the first incomplete quest from persisted answers
+  ---
+  duration_ms: 0.473584
+  type: 'test'
+  ...
+# Subtest: saved answers rather than counts or visited flags decide which quest remains
+ok 68 - saved answers rather than counts or visited flags decide which quest remains
+  ---
+  duration_ms: 0.066041
+  type: 'test'
+  ...
+# Subtest: completed discovery displays current saved choices and clues including a revision
+ok 69 - completed discovery displays current saved choices and clues including a revision
+  ---
+  duration_ms: 0.106583
+  type: 'test'
+  ...
+# Subtest: reload restores answers, confirmation requirements and server-reported reward receipts
+ok 70 - reload restores answers, confirmation requirements and server-reported reward receipts
+  ---
+  duration_ms: 1.719375
+  type: 'test'
+  ...
+# Subtest: discovery projection does not modify persisted answers, profile or XP
+ok 71 - discovery projection does not modify persisted answers, profile or XP
+  ---
+  duration_ms: 0.236541
+  type: 'test'
+  ...
+# Subtest: new explorer renders unanswered Quest 1 without saved selections
+ok 72 - new explorer renders unanswered Quest 1 without saved selections
+  ---
+  duration_ms: 4.781291
+  type: 'test'
+  ...
+# Subtest: partial explorer and reload render the first incomplete Quest 2
+ok 73 - partial explorer and reload render the first incomplete Quest 2
+  ---
+  duration_ms: 1.231209
+  type: 'test'
+  ...
+# Subtest: completed explorer renders all saved answers, Discovery Clues, explicit edits and actual reward total
+ok 74 - completed explorer renders all saved answers, Discovery Clues, explicit edits and actual reward total
+  ---
+  duration_ms: 90.047625
+  type: 'test'
+  ...
+# Subtest: all four entry states are distinct without automatic explorer selection
+ok 75 - all four entry states are distinct without automatic explorer selection
+  ---
+  duration_ms: 0.401167
+  type: 'test'
+  ...
+# Subtest: nickname grade and fictional acknowledgement are required
+ok 76 - nickname grade and fictional acknowledgement are required
+  ---
+  duration_ms: 0.111792
+  type: 'test'
+  ...
+# Subtest: lost response retry and reload retain the same request identity
+ok 77 - lost response retry and reload retain the same request identity
+  ---
+  duration_ms: 1.146125
+  type: 'test'
+  ...
+# Subtest: invalid form never stores a receipt, changed setup gets a new identity
+ok 78 - invalid form never stores a receipt, changed setup gets a new identity
+  ---
+  duration_ms: 0.153208
+  type: 'test'
+  ...
+# Subtest: only remembered IDs are checked and backend saved identity refreshes local metadata
+ok 79 - only remembered IDs are checked and backend saved identity refreshes local metadata
+  ---
+  duration_ms: 0.403833
+  type: 'test'
+  ...
+# Subtest: unavailable backend cannot be mistaken for a fresh session
+ok 80 - unavailable backend cannot be mistaken for a fresh session
+  ---
+  duration_ms: 0.624292
+  type: 'test'
+  ...
+# Subtest: exactly four primary destinations retain the existing worlds ID
+ok 81 - exactly four primary destinations retain the existing worlds ID
+  ---
+  duration_ms: 8.933583
+  type: 'test'
+  ...
+# Subtest: Home keeps shared identity with one navigation and no global progress strip
+ok 82 - Home keeps shared identity with one navigation and no global progress strip
+  ---
+  duration_ms: 3.27225
+  type: 'test'
+  ...
+# Subtest: identity menu exposes profile switching and secondary saved activities
+ok 83 - identity menu exposes profile switching and secondary saved activities
+  ---
+  duration_ms: 4.078667
+  type: 'test'
+  ...
+# Subtest: zero XP is real and missing identity/points have neutral noninvented fallbacks
+ok 84 - zero XP is real and missing identity/points have neutral noninvented fallbacks
+  ---
+  duration_ms: 0.928
+  type: 'test'
+  ...
+# Subtest: XP explanation is accessible through native details and a described summary
+ok 85 - XP explanation is accessible through native details and a described summary
+  ---
+  duration_ms: 2.559333
+  type: 'test'
+  ...
+# Subtest: new and partial students have four honest stages and resume saved quest count
+ok 86 - new and partial students have four honest stages and resume saved quest count
+  ---
+  duration_ms: 11.291792
+  type: 'test'
+  ...
+# Subtest: confirmation and career research recommendation follow saved data
+ok 87 - confirmation and career research recommendation follow saved data
+  ---
+  duration_ms: 0.211625
+  type: 'test'
+  ...
+# Subtest: completed portfolio points Home directly at saved portfolio and remains revisitable
+ok 88 - completed portfolio points Home directly at saved portfolio and remains revisitable
+  ---
+  duration_ms: 0.592084
+  type: 'test'
+  ...
+# Subtest: profile change names review requirement and keeps historical Explore/Celebrate accessible
+ok 89 - profile change names review requirement and keeps historical Explore/Celebrate accessible
+  ---
+  duration_ms: 0.999541
+  type: 'test'
+  ...
+# Subtest: stale parent/child confirmation or version cannot visually unlock personalization
+ok 90 - stale parent/child confirmation or version cannot visually unlock personalization
+  ---
+  duration_ms: 0.434083
+  type: 'test'
+  ...
+# Subtest: unknown career progress never invents completion or a permanent lock
+ok 91 - unknown career progress never invents completion or a permanent lock
+  ---
+  duration_ms: 0.10375
+  type: 'test'
+  ...
+# Subtest: milestone and saved portfolio share My Portfolio navigation and Celebrate stage
+ok 92 - milestone and saved portfolio share My Portfolio navigation and Celebrate stage
+  ---
+  duration_ms: 0.087375
+  type: 'test'
+  ...
+# Subtest: actual Home trail has four stages and one primary action, never repeated in shell
+ok 93 - actual Home trail has four stages and one primary action, never repeated in shell
+  ---
+  duration_ms: 2.762875
+  type: 'test'
+  ...
+# Subtest: shell highlights only the actual primary page and does not mutate records
+ok 94 - shell highlights only the actual primary page and does not mutate records
+  ---
+  duration_ms: 0.414875
+  type: 'test'
+  ...
+# Subtest: shared typography layout and reduced motion have explicit rules
+ok 95 - shared typography layout and reduced motion have explicit rules
+  ---
+  duration_ms: 3.340209
+  type: 'test'
+  ...
+# Subtest: My Portfolio uses the same research component with read-model progress callbacks
+ok 96 - My Portfolio uses the same research component with read-model progress callbacks
+  ---
+  duration_ms: 3.437917
+  type: 'test'
+  ...
+# Subtest: shared header has exactly one four-item primary menu and no progress-strip navigation
+ok 97 - shared header has exactly one four-item primary menu and no progress-strip navigation
+  ---
+  duration_ms: 17.284667
+  type: 'test'
+  ...
+# Subtest: only actual destinations are highlighted; profile and synthetic switcher have no false Home selection
+ok 98 - only actual destinations are highlighted; profile and synthetic switcher have no false Home selection
+  ---
+  duration_ms: 0.088833
+  type: 'test'
+  ...
+# Subtest: new partial and unconfirmed states use saved counts and profile gates
+ok 99 - new partial and unconfirmed states use saved counts and profile gates
+  ---
+  duration_ms: 1.058917
+  type: 'test'
+  ...
+# Subtest: confirmed research and portfolio-ready messages correspond to persisted backend state
+ok 100 - confirmed research and portfolio-ready messages correspond to persisted backend state
+  ---
+  duration_ms: 0.514833
+  type: 'test'
+  ...
+# Subtest: current portfolio uses an accurate greeting and four completed stages without recommendations
+ok 101 - current portfolio uses an accurate greeting and four completed stages without recommendations
+  ---
+  duration_ms: 6.968709
+  type: 'test'
+  ...
+# Subtest: earlier saved portfolio is not represented as current after career choices change
+ok 102 - earlier saved portfolio is not represented as current after career choices change
+  ---
+  duration_ms: 1.40775
+  type: 'test'
+  ...
+# Subtest: changed profile keeps historical stages revisitable and explicitly requests reconfirmation
+ok 103 - changed profile keeps historical stages revisitable and explicitly requests reconfirmation
+  ---
+  duration_ms: 3.087334
+  type: 'test'
+  ...
+# Subtest: stale or mismatched active portfolio data cannot claim the current portfolio is ready
+ok 104 - stale or mismatched active portfolio data cannot claim the current portfolio is ready
+  ---
+  duration_ms: 1.058292
+  type: 'test'
+  ...
+# Subtest: legacy roadmap reflection fields never control the Home message
+ok 105 - legacy roadmap reflection fields never control the Home message
+  ---
+  duration_ms: 0.347459
+  type: 'test'
+  ...
+# Subtest: returning hero remains informational with one dominant action inside the Home trail
+ok 106 - returning hero remains informational with one dominant action inside the Home trail
+  ---
+  duration_ms: 13.037292
+  type: 'test'
+  ...
+# Subtest: full trail appears only on Home; profile menu remains available on other pages
+ok 107 - full trail appears only on Home; profile menu remains available on other pages
+  ---
+  duration_ms: 1.957709
+  type: 'test'
+  ...
+# Subtest: long saved nickname is escaped and remains fully accessible without fabricated metadata
+ok 108 - long saved nickname is escaped and remains fully accessible without fabricated metadata
+  ---
+  duration_ms: 4.518958
+  type: 'test'
+  ...
+# Subtest: projection and repeated renders cannot mutate XP selections or portfolio history
+ok 109 - projection and repeated renders cannot mutate XP selections or portfolio history
+  ---
+  duration_ms: 2.031292
+  type: 'test'
+  ...
+# Subtest: trail colors control sizes focus and reduced motion are explicit
+ok 110 - trail colors control sizes focus and reduced motion are explicit
+  ---
+  duration_ms: 11.004583
+  type: 'test'
+  ...
+# Subtest: shared header measures its own height without resetting scroll and adapts for short zoomed viewports
+ok 111 - shared header measures its own height without resetting scroll and adapts for short zoomed viewports
+  ---
+  duration_ms: 3.488708
+  type: 'test'
+  ...
+# Subtest: saturated trail buttons and gold completion action meet normal-text contrast
+ok 112 - saturated trail buttons and gold completion action meet normal-text contrast
+  ---
+  duration_ms: 1.625291
+  type: 'test'
+  ...
+# Subtest: new visitors must create an explorer before starting discovery
+ok 113 - new visitors must create an explorer before starting discovery
+  ---
+  duration_ms: 1.272875
+  type: 'test'
+  ...
+# Subtest: completed quests lead to profile confirmation, keeping research locked
+ok 114 - completed quests lead to profile confirmation, keeping research locked
+  ---
+  duration_ms: 0.863291
+  type: 'test'
+  ...
+# Subtest: saved research and roadmap move the next step to reflection after reload
+ok 115 - saved research and roadmap move the next step to reflection after reload
+  ---
+  duration_ms: 0.272042
+  type: 'test'
+  ...
+# Subtest: confirmed style and goal are restored without needing a recent confirmation event
+ok 116 - confirmed style and goal are restored without needing a recent confirmation event
+  ---
+  duration_ms: 0.180791
+  type: 'test'
+  ...
+# Subtest: profile switching remembers separate explorers without erasing either
+ok 117 - profile switching remembers separate explorers without erasing either
+  ---
+  duration_ms: 0.437459
+  type: 'test'
+  ...
+# Subtest: Dashboard resumes quests or required confirmation before personalized exploration
+ok 118 - Dashboard resumes quests or required confirmation before personalized exploration
+  ---
+  duration_ms: 0.522375
+  type: 'test'
+  ...
+# Subtest: an unconfirmed draft restores edits while the old confirmed profile remains intact
+ok 119 - an unconfirmed draft restores edits while the old confirmed profile remains intact
+  ---
+  duration_ms: 0.185959
+  type: 'test'
+  ...
+# Subtest: portfolio preview has no path dropdowns or redundant save-path controls
+ok 120 - portfolio preview has no path dropdowns or redundant save-path controls
+  ---
+  duration_ms: 4.06575
+  type: 'test'
+  ...
+# Subtest: visual portfolio contains saved identity interests story branches careers skills reasons and sources
+ok 121 - visual portfolio contains saved identity interests story branches careers skills reasons and sources
+  ---
+  duration_ms: 1.244583
+  type: 'test'
+  ...
+# Subtest: two saved priorities are displayed as choices rather than career rankings
+ok 122 - two saved priorities are displayed as choices rather than career rankings
+  ---
+  duration_ms: 1.483625
+  type: 'test'
+  ...
+# Subtest: undecided snapshot is valid and never assigns a primary career
+ok 123 - undecided snapshot is valid and never assigns a primary career
+  ---
+  duration_ms: 2.013708
+  type: 'test'
+  ...
+# Subtest: saved view downloads the exact immutable version and has no confirmation or editing controls
+ok 124 - saved view downloads the exact immutable version and has no confirmation or editing controls
+  ---
+  duration_ms: 13.809583
+  type: 'test'
+  ...
+# Subtest: stale profile preserves readable history and offers upstream changes
+ok 125 - stale profile preserves readable history and offers upstream changes
+  ---
+  duration_ms: 0.825208
+  type: 'test'
+  ...
+# Subtest: missing prerequisites offer recovery without fabricating preview fields
+ok 126 - missing prerequisites offer recovery without fabricating preview fields
+  ---
+  duration_ms: 0.798292
+  type: 'test'
+  ...
+# Subtest: legacy final portfolios are read honestly without rebuilding old interests from today
+ok 127 - legacy final portfolios are read honestly without rebuilding old interests from today
+  ---
+  duration_ms: 0.647042
+  type: 'test'
+  ...
+# Subtest: saved undecided preference resumes on Explore Careers without an automatic priority
+ok 128 - saved undecided preference resumes on Explore Careers without an automatic priority
+  ---
+  duration_ms: 0.768167
+  type: 'test'
+  ...
+# Subtest: Home recommends preference selection before Celebrate when required by backend
+ok 129 - Home recommends preference selection before Celebrate when required by backend
+  ---
+  duration_ms: 0.406958
+  type: 'test'
+  ...
+# Subtest: student text is escaped and no unsupported story is called AI-generated
+ok 130 - student text is escaped and no unsupported story is called AI-generated
+  ---
+  duration_ms: 0.751
+  type: 'test'
+  ...
+# Subtest: portfolio styling has readable vertical mobile branches and reduced motion
+ok 131 - portfolio styling has readable vertical mobile branches and reduced motion
+  ---
+  duration_ms: 4.09175
+  type: 'test'
+  ...
+# Subtest: portfolio only claims its saved completion receipt and never consumes previews or other milestones
+ok 132 - portfolio only claims its saved completion receipt and never consumes previews or other milestones
+  ---
+  duration_ms: 0.624167
+  type: 'test'
+  ...
+# Subtest: known instructional correction becomes a student-friendly presentation without changing its source
+ok 133 - known instructional correction becomes a student-friendly presentation without changing its source
+  ---
+  duration_ms: 0.516667
+  type: 'test'
+  ...
+# Subtest: unknown notes are not given an invented interpretation
+ok 134 - unknown notes are not given an invented interpretation
+  ---
+  duration_ms: 0.108542
+  type: 'test'
+  ...
+# Subtest: all three profile states are distinguished using backend records
+ok 135 - all three profile states are distinguished using backend records
+  ---
+  duration_ms: 0.126042
+  type: 'test'
+  ...
+# Subtest: saved draft changes remain reconstructable after reload without modifying audit objects
+ok 136 - saved draft changes remain reconstructable after reload without modifying audit objects
+  ---
+  duration_ms: 2.710167
+  type: 'test'
+  ...
+# Subtest: legacy missing preferences do not produce undefined change descriptions
+ok 137 - legacy missing preferences do not produce undefined change descriptions
+  ---
+  duration_ms: 0.161917
+  type: 'test'
+  ...
+# Subtest: completed quest page has one review CTA, no proposed profile and no review radios
+ok 138 - completed quest page has one review CTA, no proposed profile and no review radios
+  ---
+  duration_ms: 18.4735
+  type: 'test'
+  ...
+# Subtest: profile separates actual choices and editable interpretation with a nickname heading
+ok 139 - profile separates actual choices and editable interpretation with a nickname heading
+  ---
+  duration_ms: 3.065834
+  type: 'test'
+  ...
+# Subtest: Yes exposes only one explicit confirmation action
+ok 140 - Yes exposes only one explicit confirmation action
+  ---
+  duration_ms: 1.203292
+  type: 'test'
+  ...
+# Subtest: Somewhat presents retained interests and correction before one revision action
+ok 141 - Somewhat presents retained interests and correction before one revision action
+  ---
+  duration_ms: 1.807458
+  type: 'test'
+  ...
+# Subtest: Not really offers a new proposal or manual editing without a confirmation action
+ok 142 - Not really offers a new proposal or manual editing without a confirmation action
+  ---
+  duration_ms: 2.374792
+  type: 'test'
+  ...
+# Subtest: new revised proposal does not inherit Yes from the earlier version
+ok 143 - new revised proposal does not inherit Yes from the earlier version
+  ---
+  duration_ms: 1.044958
+  type: 'test'
+  ...
+# Subtest: returning confirmed profile has no repeated feedback controls and keeps edit action
+ok 144 - returning confirmed profile has no repeated feedback controls and keeps edit action
+  ---
+  duration_ms: 1.791667
+  type: 'test'
+  ...
+# Subtest: confirmed profile has interest cards and friendly notes with audit versions in secondary details
+ok 145 - confirmed profile has interest cards and friendly notes with audit versions in secondary details
+  ---
+  duration_ms: 0.991791
+  type: 'test'
+  ...
+# Subtest: unconfirmed page exposes editable interests alongside feedback controls
+ok 146 - unconfirmed page exposes editable interests alongside feedback controls
+  ---
+  duration_ms: 1.768375
+  type: 'test'
+  ...
+# Subtest: reconfirmation opens saved fields and correction controls before final review
+ok 147 - reconfirmation opens saved fields and correction controls before final review
+  ---
+  duration_ms: 2.564208
+  type: 'test'
+  ...
+# Subtest: unsure confirmed student sees an open-options card rather than invented interests
+ok 148 - unsure confirmed student sees an open-options card rather than invented interests
+  ---
+  duration_ms: 0.646583
+  type: 'test'
+  ...
+# Subtest: quest preview cannot answer a saved agent question or open duplicate manual review
+ok 149 - quest preview cannot answer a saved agent question or open duplicate manual review
+  ---
+  duration_ms: 0.252291
+  type: 'test'
+  ...
+# Subtest: bounded failure leaves a labeled manual proposal and does not reuse an old Yes
+ok 150 - bounded failure leaves a labeled manual proposal and does not reuse an old Yes
+  ---
+  duration_ms: 2.240625
+  type: 'test'
+  ...
+# Subtest: new explorer trail has no completed stages and explains setup prerequisites
+ok 151 - new explorer trail has no completed stages and explains setup prerequisites
+  ---
+  duration_ms: 0.457042
+  type: 'test'
+  ...
+# Subtest: partially completed quests remain recommended and future locks describe real prerequisites
+ok 152 - partially completed quests remain recommended and future locks describe real prerequisites
+  ---
+  duration_ms: 0.154959
+  type: 'test'
+  ...
+# Subtest: confirmed profile recommends Explore while Plan and Reflect are available
+ok 153 - confirmed profile recommends Explore while Plan and Reflect are available
+  ---
+  duration_ms: 0.243958
+  type: 'test'
+  ...
+# Subtest: recommending Explore again never relocks saved Plan or Reflect
+ok 154 - recommending Explore again never relocks saved Plan or Reflect
+  ---
+  duration_ms: 0.21875
+  type: 'test'
+  ...
+# Subtest: reconfirmation preserves historical completion and names the genuine unmet gate
+ok 155 - reconfirmation preserves historical completion and names the genuine unmet gate
+  ---
+  duration_ms: 0.35
+  type: 'test'
+  ...
+# Subtest: trail projection preserves hero CTA, backend values and actual page targets
+ok 156 - trail projection preserves hero CTA, backend values and actual page targets
+  ---
+  duration_ms: 0.65775
+  type: 'test'
+  ...
+# Subtest: new student gets a first-discovery welcome without invented grade or points
+ok 157 - new student gets a first-discovery welcome without invented grade or points
+  ---
+  duration_ms: 0.52175
+  type: 'test'
+  ...
+# Subtest: partial quests use the persisted count and actual quest total
+ok 158 - partial quests use the persisted count and actual quest total
+  ---
+  duration_ms: 0.587333
+  type: 'test'
+  ...
+# Subtest: completed quests never receive the old start-three-quests instruction
+ok 159 - completed quests never receive the old start-three-quests instruction
+  ---
+  duration_ms: 0.394667
+  type: 'test'
+  ...
+# Subtest: legacy roadmap fields do not leak into Home and reconfirmation remains explicit
+ok 160 - legacy roadmap fields do not leak into Home and reconfirmation remains explicit
+  ---
+  duration_ms: 0.123375
+  type: 'test'
+  ...
+# Subtest: metadata uses saved grade and earned XP, including a genuine zero
+ok 161 - metadata uses saved grade and earned XP, including a genuine zero
+  ---
+  duration_ms: 0.315
+  type: 'test'
+  ...
+# Subtest: hero rendering decisions do not mutate saved progress
+ok 162 - hero rendering decisions do not mutate saved progress
+  ---
+  duration_ms: 0.058458
+  type: 'test'
+  ...
+# Subtest: first-time Welcome requires setup then starts the actual first quest
+ok 163 - first-time Welcome requires setup then starts the actual first quest
+  ---
+  duration_ms: 0.41325
+  type: 'test'
+  ...
+# Subtest: Welcome uses the saved nickname with a neutral fallback
+ok 164 - Welcome uses the saved nickname with a neutral fallback
+  ---
+  duration_ms: 0.0865
+  type: 'test'
+  ...
+# Subtest: Welcome primary CTA resumes the first unfinished saved activity
+ok 165 - Welcome primary CTA resumes the first unfinished saved activity
+  ---
+  duration_ms: 3.923958
+  type: 'test'
+  ...
+# Subtest: five stages preserve history while an edited profile requires confirmation again
+ok 166 - five stages preserve history while an edited profile requires confirmation again
+  ---
+  duration_ms: 0.420334
+  type: 'test'
+  ...
+# Subtest: a saved plan cannot hide the first incomplete exploration stage
+ok 167 - a saved plan cannot hide the first incomplete exploration stage
+  ---
+  duration_ms: 0.068084
+  type: 'test'
+  ...
+# Subtest: rendering and revisiting Welcome cannot change persisted XP or completion
+ok 168 - rendering and revisiting Welcome cannot change persisted XP or completion
+  ---
+  duration_ms: 0.07025
+  type: 'test'
+  ...
+# Subtest: a client receipt cannot create an explorer without a backend profile response
+ok 169 - a client receipt cannot create an explorer without a backend profile response
+  ---
+  duration_ms: 0.319
+  type: 'test'
+  ...
+# Subtest: only the newly saved backend explorer receives the transient aboard state
+ok 170 - only the newly saved backend explorer receives the transient aboard state
+  ---
+  duration_ms: 0.053208
+  type: 'test'
+  ...
+# Subtest: reload and existing backend progress always use returning Home
+ok 171 - reload and existing backend progress always use returning Home
+  ---
+  duration_ms: 0.064458
+  type: 'test'
+  ...
+# Subtest: partial quests: one trail CTA, no hero navigation, and Switch Explorer only in the header
+ok 172 - partial quests: one trail CTA, no hero navigation, and Switch Explorer only in the header
+  ---
+  duration_ms: 6.990958
+  type: 'test'
+  ...
+# Subtest: confirmed profile: one trail CTA, no hero navigation, and Switch Explorer only in the header
+ok 173 - confirmed profile: one trail CTA, no hero navigation, and Switch Explorer only in the header
+  ---
+  duration_ms: 1.926292
+  type: 'test'
+  ...
+# Subtest: saved roadmap: one trail CTA, no hero navigation, and Switch Explorer only in the header
+ok 174 - saved roadmap: one trail CTA, no hero navigation, and Switch Explorer only in the header
+  ---
+  duration_ms: 1.814209
+  type: 'test'
+  ...
+# Subtest: reconfirmation: one trail CTA, no hero navigation, and Switch Explorer only in the header
+ok 175 - reconfirmation: one trail CTA, no hero navigation, and Switch Explorer only in the header
+  ---
+  duration_ms: 2.870792
+  type: 'test'
+  ...
+# Subtest: other-page headers expose the profile menu and four primary destinations
+ok 176 - other-page headers expose the profile menu and four primary destinations
+  ---
+  duration_ms: 0.903958
+  type: 'test'
+  ...
+# Subtest: first-time setup includes avatars explicit grade and fictional acknowledgment before creation
+ok 177 - first-time setup includes avatars explicit grade and fictional acknowledgment before creation
+  ---
+  duration_ms: 1.248417
+  type: 'test'
+  ...
+# Subtest: successful backend creation shows Welcome aboard and a single First Mission CTA with zero saved points
+ok 178 - successful backend creation shows Welcome aboard and a single First Mission CTA with zero saved points
+  ---
+  duration_ms: 0.5485
+  type: 'test'
+  ...
+# Subtest: reload with a saved explorer shows returning Home and its one Trail CTA
+ok 179 - reload with a saved explorer shows returning Home and its one Trail CTA
+  ---
+  duration_ms: 1.213583
+  type: 'test'
+  ...
+# Subtest: creation acknowledgement handles a missing saved nickname gracefully
+ok 180 - creation acknowledgement handles a missing saved nickname gracefully
+  ---
+  duration_ms: 0.790959
+  type: 'test'
+  ...
+# Subtest: loading and errors never expose an accidental creation form
+ok 181 - loading and errors never expose an accidental creation form
+  ---
+  duration_ms: 0.776458
+  type: 'test'
+  ...
+# Subtest: saved explorers without an active selection show a choice, not the setup or saved names
+ok 182 - saved explorers without an active selection show a choice, not the setup or saved names
+  ---
+  duration_ms: 0.496375
+  type: 'test'
+  ...
+# Subtest: unselected header omits student identity points and personalized navigation
+ok 183 - unselected header omits student identity points and personalized navigation
+  ---
+  duration_ms: 0.175833
+  type: 'test'
+  ...
+# Subtest: explorer selection switch keeps saved profiles separate and never prefills a new explorer
+ok 184 - explorer selection switch keeps saved profiles separate and never prefills a new explorer
+  ---
+  duration_ms: 0.918167
+  type: 'test'
+  ...
+# Subtest: explorer selection create keeps saved profiles separate and never prefills a new explorer
+ok 185 - explorer selection create keeps saved profiles separate and never prefills a new explorer
+  ---
+  duration_ms: 1.679834
+  type: 'test'
+  ...
+# Subtest: explorer selection saved keeps saved profiles separate and never prefills a new explorer
+ok 186 - explorer selection saved keeps saved profiles separate and never prefills a new explorer
+  ---
+  duration_ms: 0.195834
+  type: 'test'
+  ...
+1..186
+# tests 186
+# suites 0
+# pass 186
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 922.84875

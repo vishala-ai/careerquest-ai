@@ -1,0 +1,23 @@
+[
+  {
+    "correctionWidth": 295.5234375,
+    "scrollWidth": 375,
+    "summaryWords": 93,
+    "width": 375,
+    "worldColumns": "295.523px"
+  },
+  {
+    "correctionWidth": 676.5234375,
+    "scrollWidth": 768,
+    "summaryWords": 93,
+    "width": 768,
+    "worldColumns": "676.523px"
+  },
+  {
+    "correctionWidth": 1142.765625,
+    "scrollWidth": 1280,
+    "summaryWords": 93,
+    "width": 1280,
+    "worldColumns": "370.254px 370.254px 370.266px"
+  }
+]

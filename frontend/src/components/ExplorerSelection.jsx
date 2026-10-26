@@ -1,0 +1,10 @@
+import React from 'react';
+import {ArrowUpRight,ShieldCheck} from 'lucide-react';
+import ExplorerSetup from './ExplorerSetup';
+import {Button,PageHeading} from './Shared';
+export default function ExplorerSelection({explorers,pid,onSelect,onCreate,onView,onWelcome,view='switch',busy=false}) {
+ return <div className="explorer-selection"><PageHeading eyebrow="EDUCATIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are demo profiles saved for testing. Sign in to access your own Explorer.</PageHeading><div className="button-row"><Button className="secondary" onClick={onWelcome} disabled={busy} aria-describedby="welcome-return-help">Back to Welcome</Button><p id="welcome-return-help" className="small-note">Your saved explorers and progress stay available.</p></div><div className={`explorer-selection-layout selection-${view}`}>
+ {view!=='saved'&&<ExplorerSetup key="new-explorer" onCreate={onCreate} busy={busy}/>}
+ {view!=='create'&&<section className="panel saved-profiles" aria-labelledby="saved-explorers-title"><h2 id="saved-explorers-title">Your saved explorers</h2><p>Choose whose adventure to continue.</p>{explorers.length?explorers.map(explorer=><button className={`saved-explorer ${explorer.id===pid?'selected':''}`} key={explorer.id} disabled={busy} onClick={()=>onSelect(explorer.id)}><span className="mini-avatar" aria-hidden="true">{explorer.avatar||'🧭'}</span><span><strong>{explorer.alias?.trim()||'Explorer'}</strong><small>Grade {explorer.grade}{explorer.id===pid?' · Current explorer':''}</small></span><ArrowUpRight size={18} aria-hidden="true"/></button>):<p>No saved explorers are available to this browser yet.</p>}<p className="setup-local-note"><ShieldCheck size={20} aria-hidden="true"/>No email, real name, or birthday needed.</p>{view==='saved'&&<Button className="secondary" onClick={()=>onView('create')}>Create a New Explorer</Button>}</section>}
+ </div>{view==='create'&&explorers.length>0&&<Button className="ghost" onClick={()=>onView('saved')}>Back to saved explorers</Button>}</div>;
+}

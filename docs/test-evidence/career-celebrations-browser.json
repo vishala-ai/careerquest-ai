@@ -1,0 +1,56 @@
+{
+  "fictional_student": "Orion Fictional",
+  "prerequisites": "UI creation; existing API quest/confirmation setup",
+  "backend_tests": 172,
+  "frontend_tests": 120,
+  "xp_initial_after_confirmation": 70,
+  "xp_final": 70,
+  "milestone_receipts": [
+    {
+      "kind": "first_research",
+      "delivered": true,
+      "acknowledged": true
+    },
+    {
+      "kind": "first_shortlist",
+      "delivered": true,
+      "acknowledged": true
+    },
+    {
+      "kind": "second_shortlist",
+      "delivered": true,
+      "acknowledged": true
+    },
+    {
+      "kind": "primary_path",
+      "delivered": true,
+      "acknowledged": true
+    },
+    {
+      "kind": "secondary_path",
+      "delivered": true,
+      "acknowledged": true
+    },
+    {
+      "kind": "portfolio_completed",
+      "delivered": true,
+      "acknowledged": true
+    }
+  ],
+  "portfolio_completion_versions": 1,
+  "shortlist_count": 2,
+  "path_versions": 2,
+  "browser_checks": [
+    "six personalized milestone cards observed",
+    "Tab reaches dismiss and Enter acknowledges",
+    "context CTA focuses shortlist/paths/portfolio headings",
+    "no replay after research/reload/completion reload",
+    "375px card and completion layouts fit document and viewport",
+    "1279px final card is 520px wide",
+    "reduced-motion rules verified in loaded CSSOM; OS preference not toggled"
+  ],
+  "browser_js_errors": [],
+  "live_groq": false,
+  "actual_server_restart_preserved_overview": true,
+  "celebration_after_restart": null
+}

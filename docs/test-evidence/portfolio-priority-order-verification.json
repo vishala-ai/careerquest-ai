@@ -1,0 +1,84 @@
+{
+  "change": "Display Primary, Secondary, then remaining careers in stable saved order. Applies to preview, saved/historical portfolio map and career notes, plus version-specific PDF. Undecided/no-path snapshots retain original order.",
+  "changed_source_test_files": [
+    "frontend/src/portfolioOrder.js",
+    "frontend/src/pages/CareerPortfolio.jsx",
+    "careerquest/portfolio_pdf.py",
+    "frontend/tests/portfolio-flow.test.js",
+    "tests/test_portfolio_order.py"
+  ],
+  "protected_source_changes": [],
+  "database_schema_changes": false,
+  "working_student_database_writes": false,
+  "saved_snapshot_unchanged_after_pdf_and_browser": true,
+  "tests": {
+    "backend": {
+      "passed": 212,
+      "failed": 0,
+      "skipped": 0
+    },
+    "frontend": {
+      "passed": 192,
+      "failed": 0,
+      "skipped": 0
+    },
+    "production_build": "passed"
+  },
+  "commands": [
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": ".venv/bin/python -m unittest discover -s tests -v"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm test"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm run build"
+    }
+  ],
+  "browser": {
+    "fixture": "Existing isolated Fictional Career Focus explorer; no working demo student modified.",
+    "original_stored_shortlist_order": [
+      "bioengineering",
+      "environment",
+      "software"
+    ],
+    "saved_path_preferences": {
+      "primary": "environment",
+      "secondary": "software"
+    },
+    "verified_map_and_notes_order": [
+      "environment",
+      "software",
+      "bioengineering"
+    ],
+    "desktop": {
+      "width": 1280,
+      "document_width": 1280
+    },
+    "mobile": {
+      "width": 375,
+      "document_width": 375
+    },
+    "saved_controls": "Download PDF / Create Updated Version retained"
+  },
+  "pdf": {
+    "file": "/private/tmp/careerquest-portfolio-order-ecnm6ldo/ordered-portfolio.pdf",
+    "pages": 2,
+    "verified_order": [
+      "environment",
+      "software",
+      "bioengineering"
+    ],
+    "visual_check": "Rendered map page inspected; Primary/Secondary/Other map and first career section correctly ordered without clipping."
+  },
+  "normal_backend": "Restarted on port 8000 with existing database/environment; health returned langgraph.",
+  "unverified": [
+    "No new live Groq inference; priorities come only from the saved snapshot.",
+    "No full screen-reader/physical-device audit.",
+    "Undecided, legacy, primary-only, stable Other order and frozen/history records covered by automated tests rather than separate browser profiles."
+  ],
+  "screenshot": "docs/test-evidence/portfolio-primary-secondary-other.jpg"
+}

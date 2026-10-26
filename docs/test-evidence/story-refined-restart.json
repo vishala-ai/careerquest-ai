@@ -1,0 +1,18 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "all_preexisting_rows_unchanged": true,
+  "table_counts_before": {
+    "profiles": 5,
+    "events": 40,
+    "plans": 7,
+    "runs": 42,
+    "discovery_stories": 1,
+    "discovery_feedback": 1
+  },
+  "schema_change": "Two additive context/adjustment tables; no historical rows rewritten",
+  "live_calls_during_restart": 0
+}

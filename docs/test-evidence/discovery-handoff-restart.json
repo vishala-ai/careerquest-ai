@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "complete_api_state_equal_after_process_restart": true,
+  "xp": 80,
+  "raw_quest_answers": 3,
+  "story_versions": 2,
+  "handoff_versions": 2,
+  "current_profile_version": 2,
+  "confirmed": true,
+  "exploratory": true,
+  "current_world_ids": [],
+  "database": "isolated fictional SQLite",
+  "feedback_records": 2
+}

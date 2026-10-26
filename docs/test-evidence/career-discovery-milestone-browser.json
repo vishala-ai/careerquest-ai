@@ -1,0 +1,59 @@
+{
+  "fictional_student": "River Fictional; missing-nickname fixture later used",
+  "eligible_counts_observed": {
+    "careers_researched": 2,
+    "careers_shortlisted": 1,
+    "confirmed_interests": 2
+  },
+  "multiple_shortlist_counts_observed": {
+    "careers_researched": 2,
+    "careers_shortlisted": 2,
+    "confirmed_interests": 2
+  },
+  "anonymous_counts": [
+    "\u2014",
+    "\u2014",
+    "\u2014"
+  ],
+  "milestone_and_entry_created_no_paths_or_portfolios": true,
+  "unassigned_paths_after_entry": [
+    "",
+    ""
+  ],
+  "returning_portfolio_observed": true,
+  "missing_nickname_fallback_observed": true,
+  "stale_entry_http_status": 409,
+  "stale_progress": {
+    "nickname": null,
+    "confirmed": false,
+    "eligible": false,
+    "counts": {
+      "careers_researched": 2,
+      "careers_shortlisted": 2,
+      "confirmed_interests": null
+    },
+    "count_scope": "Distinct saved careers across your exploration history; interests from your current confirmed profile.",
+    "current_shortlist_count": 0,
+    "recovery_page": "confirm",
+    "profile_context": null,
+    "returning_portfolio": true
+  },
+  "xp_before_and_after": 70,
+  "portfolio_history_versions_preserved": 1,
+  "keyboard_primary_and_secondary_navigation": "passed",
+  "mobile": {
+    "actual_css_width": 375,
+    "document_width": 375,
+    "title_font_px": 36,
+    "body_font_px": 17,
+    "primary_button_width": 303.046875,
+    "primary_button_height": 82.5468521118164
+  },
+  "desktop_css_width": 1279,
+  "reduced_motion": "CSSOM animation-name none / transition-property none verified; OS preference not toggled",
+  "returning_animation_name": "none",
+  "browser_js_errors": [],
+  "backend_tests": 182,
+  "frontend_tests": 130,
+  "reference_illustration": "No attachment was available; code-native SVG follows textual emerald/gold direction."
+}

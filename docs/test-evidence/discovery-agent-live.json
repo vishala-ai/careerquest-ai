@@ -1,0 +1,49 @@
+{
+  "check": "LIVE Student Discovery Agent selection/resume",
+  "initial_story_setup_mocked": true,
+  "routing_mocked": false,
+  "status": "passed",
+  "model": "openai/gpt-oss-120b",
+  "engine": "langgraph",
+  "actions": [
+    {
+      "action": "ask_clarifying_question",
+      "method": "groq",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "action": "revise_discovery_story",
+      "method": "groq",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "action": "suggest_career_worlds",
+      "method": "groq",
+      "status": "completed",
+      "error": null
+    },
+    {
+      "action": "request_profile_review",
+      "method": "bounded_policy",
+      "status": "completed",
+      "error": null
+    }
+  ],
+  "live_model_decisions": 3,
+  "clarifications_answered": 1,
+  "terminal_status": "pending_profile_confirmation",
+  "generated_new_story": true,
+  "followup_generation_status": "groq",
+  "world_ids": [
+    "design"
+  ],
+  "fallback_used": false,
+  "confirmed": false,
+  "xp": 60,
+  "quest_answers_unchanged": true,
+  "cached_resume": true,
+  "roadmap_gate": 409,
+  "database": "temporary fictional SQLite; normal database untouched"
+}

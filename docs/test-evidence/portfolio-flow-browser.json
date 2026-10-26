@@ -1,0 +1,35 @@
+{
+  "synthetic_only": true,
+  "main_walkthrough": {
+    "nickname": "Cedar Fictional",
+    "grade": 10,
+    "xp": 70,
+    "portfolio_versions": 3,
+    "path_versions": 3,
+    "current_undecided": true
+  },
+  "fresh_undecided_student": {
+    "nickname": "Willow Fictional",
+    "xp": 70,
+    "preview_celebrations": 0,
+    "saved_celebration_kind": "portfolio_completed",
+    "other_receipts_remain_pending": true,
+    "reload_celebrations": 0
+  },
+  "responsive_widths": [
+    375,
+    768,
+    1279
+  ],
+  "horizontal_overflow": false,
+  "portfolio_select_count": 0,
+  "keyboard_confirmation": true,
+  "restart_persistence": true,
+  "pdf_ui_download_exercised": true,
+  "console_errors": [],
+  "limits": [
+    "No live Groq inference",
+    "No full screen-reader audit or OS-level reduced-motion activation",
+    "Desktop width measured 1279px at existing browser zoom"
+  ]
+}

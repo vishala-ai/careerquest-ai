@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "mode": "browser: explicit deterministic fallback; separate live smoke artifact",
+  "fictional_student": "Orbit Fictional",
+  "final_xp": 70,
+  "profile_version": 2,
+  "confirmation_events": 2,
+  "quest_completion_events": 3,
+  "handoff_versions": 2,
+  "current_world_ids": [
+    "design"
+  ],
+  "raw_quest_choices_unchanged": true,
+  "feedback_receipts": [
+    "Somewhat",
+    "Not really",
+    "Yes"
+  ],
+  "manual_feedback_in_draft_history": true,
+  "manual_change_details": {
+    "added": [
+      "art"
+    ],
+    "correction": "For this fictional explorer, I choose art and small creative projects.",
+    "details": [
+      {
+        "after": "Creative activities",
+        "before": "Hands-on projects",
+        "field": "Preferred activities"
+      },
+      {
+        "after": "Try a mini-project",
+        "before": "Explore careers and college majors",
+        "field": "Exploration goal"
+      }
+    ],
+    "kept": [],
+    "mode": "Not really",
+    "removed": [
+      "nature"
+    ]
+  },
+  "reconfirmation_of_unchanged_fields_awarded_no_extra_xp": true
+}

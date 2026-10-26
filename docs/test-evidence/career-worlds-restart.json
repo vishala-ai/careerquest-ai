@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "complete_career_discovery_state_equal_after_restart": true,
+  "exploration_snapshots": 3,
+  "shortlist_count": 1,
+  "xp": 70,
+  "unconfirmed_gate": 409,
+  "database": "temporary fictional SQLite"
+}

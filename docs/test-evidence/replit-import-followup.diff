@@ -1,0 +1,242 @@
+--- imported/.replit
++++ current/.replit
+@@ -8,6 +8,7 @@
+ PORT = "8000"
+ GROQ_MODEL = "openai/gpt-oss-120b"
+ CAREERQUEST_DEV_TOOLS = "0"
++CAREERQUEST_DATABASE_SCHEMA = "careerquest_demo"
+ 
+ [deployment]
+ deploymentTarget = "autoscale"
+@@ -20,3 +21,14 @@
+ 
+ [packager.features]
+ guessImports = false
++
++[workflows]
++runButton = "CareerQuest AI"
++
++[[workflows.workflow]]
++name = "CareerQuest AI"
++mode = "sequential"
++
++[[workflows.workflow.tasks]]
++task = "shell.exec"
++args = "bash scripts/replit-setup.sh && bash scripts/replit-run.sh"
+--- imported/careerquest/api.py
++++ current/careerquest/api.py
+@@ -30,7 +30,7 @@
+ except ImportError:
+     RUN=core_run
+     ENGINE="bounded_policy_fallback"
+-DB=os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3')
++DB=os.getenv('DATABASE_URL') or os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3')
+ app=FastAPI(title='CareerQuest AI Demo')
+ app.add_middleware(CORSMiddleware,allow_origins=['http://127.0.0.1:5173','http://localhost:5173'],allow_methods=['GET','POST'],allow_headers=['*'])
+ @app.on_event('startup')
+--- imported/careerquest/postgres.py
++++ current/careerquest/postgres.py
+@@ -36,8 +36,16 @@
+ 
+ class Connection:
+     def __init__(self,url,schema=None):
++        if schema and not re.fullmatch(r'[a-z][a-z0-9_]{0,62}',schema):raise ValueError('Use a lowercase PostgreSQL schema name, up to 63 characters')
+         self.raw=psycopg.connect(url,autocommit=True,connect_timeout=10,prepare_threshold=None)
+-        if schema:self.raw.execute(psycopg.sql.SQL('SET search_path TO {}').format(psycopg.sql.Identifier(schema)))
++        if schema:
++            try:
++                with self.raw.transaction():
++                    self.raw.execute('SELECT pg_advisory_xact_lock(%s)',(WRITE_LOCK,))
++                    self.raw.execute(psycopg.sql.SQL('CREATE SCHEMA IF NOT EXISTS {}').format(psycopg.sql.Identifier(schema)))
++                self.raw.execute(psycopg.sql.SQL('SET search_path TO {}').format(psycopg.sql.Identifier(schema)))
++            except Exception:
++                self.raw.close();raise
+         self.key=hashlib.sha256((url+'|'+str(schema)).encode()).hexdigest()
+     @property
+     def in_transaction(self):return self.raw.info.transaction_status!=TransactionStatus.IDLE
+--- imported/careerquest/store.py
++++ current/careerquest/store.py
+@@ -24,9 +24,11 @@
+     CREATE TABLE IF NOT EXISTS career_milestones(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),kind TEXT NOT NULL,source_id TEXT NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),payload TEXT NOT NULL,created_at TEXT NOT NULL,delivered_at TEXT,acknowledged_at TEXT,UNIQUE(profile_id,kind));
+     CREATE TABLE IF NOT EXISTS career_portfolio_completions(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,path_preference_id TEXT NOT NULL REFERENCES career_path_preferences(id),signature TEXT NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version),UNIQUE(profile_id,signature));'''
+ def connect(path=DEFAULT_DB):
+-    if os.getenv('DATABASE_URL'):
++    # An explicit SQLite path must remain local, especially in test fixtures.
++    # Only callers choosing a PostgreSQL URL can access the cloud database.
++    if str(path).startswith(('postgres://','postgresql://')):
+         from .postgres import connect as postgres_connect
+-        return postgres_connect(os.environ['DATABASE_URL'],SCHEMA)
++        return postgres_connect(str(path),SCHEMA,schema=os.getenv('CAREERQUEST_DATABASE_SCHEMA') or None)
+     path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+     c=sqlite3.connect(path);c.row_factory=sqlite3.Row;c.execute('PRAGMA foreign_keys=ON')
+     c.executescript(SCHEMA);c.commit();return c
+--- imported/docs/CLOUD_DEPLOYMENT.md
++++ current/docs/CLOUD_DEPLOYMENT.md
+@@ -1,11 +1,12 @@
+ # CareerQuest AI: new Replit project
+ 
+-This release adds self-registration and username/password login for an alias-only external demo. It has not been published or verified on a live Replit deployment. Use test data only; no real student names, contact information or records.
++This release adds self-registration and username/password login for an alias-only external demo. It is imported and verified in a Replit development preview, but has not been published. See [hosted verification](REPLIT_IMPORT_VERIFICATION.md). Use test data only; no real student names, contact information or records.
+ 
+ ## Import and preview
+ 
+ 1. Import `exports/careerquest-replit.zip` into a new Replit project. Keep source access private. If ZIP import is unavailable in your account, create a Python project, upload the ZIP and extract its contents into the project root. Do not ask Replit Agent to rebuild the application.
+ 2. Select Run. `.replit` runs `bash scripts/replit-setup.sh` and `bash scripts/replit-run.sh`. Python 3.12+, Node 22, the existing React UI and FastAPI share port 8000.
++   If Replit replaces the import’s run target with “Configure your app,” open Workflows, add a sequential Execute Shell Command task with that command, and make CareerQuest AI the default. The source configuration now includes this workflow. The installer explicitly sets `PIP_USER=false` so Replit’s user-install default does not conflict with the virtual environment.
+ 3. In preview, the server reads Replit’s server-provided `REPLIT_DEV_DOMAIN` for its HTTPS origin. Alternatively set `CAREERQUEST_PUBLIC_ORIGIN` explicitly to the exact preview origin. Do not trust a browser-supplied host or forwarded header to configure it.
+    Open that preview URL in its own browser tab for login. The app uses SameSite=Strict cookies; an embedded cross-site editor preview may block them. Do not weaken cookie protections to work around the embedded frame.
+ 4. Add the existing `GROQ_API_KEY` through Replit’s server-side Secrets interface, never chat/source/React variables. Keep `GROQ_MODEL=openai/gpt-oss-120b`. Without the key, existing labeled bounded fallbacks remain available.
+@@ -23,6 +24,7 @@
+ | `CAREERQUEST_PUBLIC_ORIGIN` | Exact `https://your-project.replit.app` origin, no path; use the selected domain |
+ | `GROQ_API_KEY` | Existing server-side Groq credential, if live generation is desired |
+ | `GROQ_MODEL` | `openai/gpt-oss-120b` |
++| `CAREERQUEST_DATABASE_SCHEMA` | `careerquest_demo` for this Replit project; creates a separate app namespace without resetting other schemas |
+ 
+ Production build: `bash scripts/replit-setup.sh`.
+ 
+@@ -60,6 +62,14 @@
+ python scripts/package_replit.py
+ ```
+ 
++In the Replit shell, run SQLite regression tests with the hosted settings cleared **for the test process only**:
++
++```sh
++REPLIT_DEV_DOMAIN= REPLIT_DEPLOYMENT=0 CAREERQUEST_PUBLIC_ORIGIN= CAREERQUEST_ENV=local CAREERQUEST_HOST=127.0.0.1 DATABASE_URL= .venv-replit/bin/python -m unittest discover -s tests -v
++```
++
++Explicit SQLite paths now stay local even when a cloud URL is inherited. The FastAPI adapter and host CLI explicitly select the configured cloud URL. Still clear hosted settings for the ordinary SQLite fixture suite: unpatched API defaults and host checks must not use the application’s cloud settings. For PostgreSQL, use the isolated-schema runner below. Never clear or reset an application database to make tests pass.
++
+ For **a separate native PostgreSQL test database**, configure `CAREERQUEST_TEST_DATABASE_URL` privately and run:
+ 
+ ```sh
+--- imported/docs/REPLIT_IMPORT_VERIFICATION.md
++++ current/docs/REPLIT_IMPORT_VERIFICATION.md
+@@ -0,0 +1,74 @@
++# Replit import and hosted verification — 2026-10-25
++
++Project created: [CareerQuest AI](https://replit.com/@vishalak-AI/CareerQuest-AI).
++
++Development preview: [Open CareerQuest AI](https://8034bb00-7561-4364-af84-c5087b51a72c-00-27oipj5cxt3wu.kirk.replit.dev/).
++
++This is an editor development preview, **not a published production deployment**. No Publish action, paid plan upgrade or hosting purchase was accepted. No local database or `.env` was uploaded. The original source ZIP’s SHA-256 was `fa25d0a07880c2b43785a0f33c63932fb4002e522994829a855d513b7f4ad92e` (158 allowlisted source entries). Subsequent integration fixes were applied to both local and Replit sources.
++
++## Verified hosted results
++
++| Check | Actual result |
++| --- | --- |
++| Python dependency installation | Passed after overriding Replit’s user-install default with `PIP_USER=false` |
++| React production build | Passed on Replit: Vite 5.4.21, 1,632 modules |
++| Backend suite on isolated SQLite fixtures | **226 passed, 0 failed, 0 skipped**; 39.268 seconds on Replit |
++| Same suite on native PostgreSQL in isolated schemas | **226 passed, 0 failed, 0 skipped**; 261.570 seconds; includes concurrency and fresh-process persistence |
++| Frontend tests on Replit | **194 passed, 0 failed, 0 skipped** |
++| Python compilation on Replit | Passed |
++| Local backend suite after integration fixes | **226 passed, 0 failed, 0 skipped** |
++
++Hosted backend command:
++
++```sh
++REPLIT_DEV_DOMAIN= REPLIT_DEPLOYMENT=0 CAREERQUEST_PUBLIC_ORIGIN= CAREERQUEST_ENV=local CAREERQUEST_HOST=127.0.0.1 DATABASE_URL= .venv-replit/bin/python -m unittest discover -s tests -v
++```
++
++Hosted native PostgreSQL command (the connection is passed internally, never displayed):
++
++```sh
++CAREERQUEST_TEST_DATABASE_URL="$DATABASE_URL" DATABASE_URL= REPLIT_DEV_DOMAIN= REPLIT_DEPLOYMENT=0 CAREERQUEST_PUBLIC_ORIGIN= CAREERQUEST_ENV=local CAREERQUEST_HOST=127.0.0.1 .venv-replit/bin/python scripts/verify_postgres.py
++```
++
++The PostgreSQL runner creates and removes only its random `cq_test_*` schemas. It does not reset application records. The two former PGlite concurrency skips were exercised successfully on native PostgreSQL.
++
++```sh
++npm --prefix frontend test
++.venv-replit/bin/python -m compileall -q careerquest app.py tests scripts
++```
++
++Hosted logs remain at `/tmp/careerquest-replit-tests-final.log`, `/tmp/careerquest-replit-native-postgres.log` and `/tmp/careerquest-replit-frontend-tests.log` in the Replit workspace. [Hosted test screenshot](test-evidence/replit-native-tests.png).
++
++## Browser walkthrough
++
++Used a test-only alias account and “Orbit Cloud Demo,” Grade 11. No real student information was entered.
++
++- Registration succeeded over the separate HTTPS preview tab; Explorer setup showed zero XP.
++- Creating one Explorer opened “Welcome aboard” and the direct Quest 1 action.
++- Saving Quest 1 awarded 20 XP and opened Quest 2.
++- Reload restored the same Explorer, one completed quest, 20 XP and “Continue Quest 2.”
++- Sign out returned to login; sign in restored the same progress.
++- Stop/Run of the Replit workflow followed by browser reload retained the session, Explorer and 20 XP. An aggregate check confirmed exactly one account and one Explorer in the demo namespace, with the earlier default-namespace fixture counts unchanged.
++- Personalized research remained locked pending quests and explicit profile confirmation.
++
++[Hosted Home screenshot](test-evidence/replit-preview-home.png). This was a development-preview smoke test, not a full live Groq/portfolio walkthrough.
++
++## Reproduced issues and fixes
++
++1. **Run workflow:** Replit initially substituted a “Configure your app” placeholder. Created the sequential CareerQuest AI workflow using the existing setup/run scripts and made it the default. Added the workflow definition to local `.replit` for future imports.
++2. **pip environment:** Initial install failed because Replit’s user-install setting conflicts with a virtual environment. The installer now runs pip with `PIP_USER=false`. No dependency versions or model providers were changed.
++3. **Hosted test isolation:** The first backend run inherited the preview hostname and cloud database. It failed with 207 failures and 3 errors; some synthetic fixture records were added to the default database namespace, and the signup rate limit was reached. The next run cleared the host/database settings but retained the shared bind address, producing 3 failures and 4 errors at local-only developer gates. The final run used explicit local test settings and passed all assertions.
++4. **Storage target boundary:** An inherited database URL previously overrode even explicit temporary SQLite paths. `store.connect(path)` now honors explicit SQLite paths; only a PostgreSQL URL selects the cloud adapter. FastAPI and the host CLI explicitly choose the configured cloud URL. A fresh-process regression test proves an explicit SQLite path never connects to an inherited cloud URL.
++5. **Demo/test separation:** Added `CAREERQUEST_DATABASE_SCHEMA=careerquest_demo`, validated and created under the existing PostgreSQL write lock. Application data uses that namespace; native tests use unique temporary namespaces. The earlier default-namespace fixture records were preserved, not deleted or reset. The initial aggregate check found 10 test accounts and 29 profiles there. Database namespace `public` does not mean those records are exposed on the website; API ownership gates still apply.
++
++Changed source/config files for these fixes: `.replit`, `scripts/replit-setup.sh`, `careerquest/store.py`, `careerquest/postgres.py`, `careerquest/api.py`, `scripts/account_admin.py`, `tests/test_auth.py`. Documentation and the import package were updated too. No agent, model, catalogue, XP reward or profile-confirmation contract was rewritten. Local business-table hashes still matched the pre-authentication baseline after this work.
++
++## Remaining release work
++
++- Production publishing and its selected HTTPS origin.
++- Confirm the **production** PostgreSQL connection and schema settings in Replit’s publishing environment; the verified database here is the development database.
++- Configure the existing Groq credential privately in server-side Secrets if live AI is wanted. No secret value was inspected, copied or entered, and no live Groq smoke test was performed.
++- Verify persistence after a published redeployment, production backups and access from a separate external browser/device.
++- Existing local demo profiles and portfolios remain local; they have not been migrated or publicly claimed.
++
++No behavioral assertion was weakened to obtain a pass. The only new backend assertion checks the explicit SQLite/cloud storage boundary.
+--- imported/scripts/account_admin.py
++++ current/scripts/account_admin.py
+@@ -24,7 +24,7 @@
+     password=getpass.getpass('New passphrase (15–128 characters): ')
+     if password!=getpass.getpass('Repeat passphrase: '):parser.error('Passphrases do not match')
+     username=auth.credentials(args.username,password)
+-    c=connect(os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3'))
++    c=connect(os.getenv('DATABASE_URL') or os.getenv('CAREERQUEST_DB','var/careerquest-react.sqlite3'))
+     try:
+         auth.initialize(c)
+         with c:
+--- imported/scripts/package_replit.py
++++ current/scripts/package_replit.py
+@@ -19,6 +19,7 @@
+     'scripts/replit-setup.sh', 'scripts/replit-run.sh',
+     'scripts/replit-production.sh','scripts/account_admin.py','scripts/verify_postgres.py',
+     'docs/CLOUD_DEPLOYMENT.md',
++    'docs/REPLIT_IMPORT_VERIFICATION.md',
+     'scripts/package_replit.py', 'scripts/smoke_core.py',
+ )
+ SOURCE_TREES = {
+--- imported/scripts/replit-setup.sh
++++ current/scripts/replit-setup.sh
+@@ -5,7 +5,8 @@
+ if [[ ! -x .venv-replit/bin/python ]]; then
+   python3 -m venv .venv-replit
+ fi
+-.venv-replit/bin/python -m pip install -r requirements-api.txt
++# Replit may set pip's user-install default; the dedicated venv must own these.
++PIP_USER=false .venv-replit/bin/python -m pip install -r requirements-api.txt
+ cd frontend
+ npm ci --no-audit --no-fund
+ npm run build
+--- imported/tests/test_auth.py
++++ current/tests/test_auth.py
+@@ -3,6 +3,8 @@
+ import time
+ import unittest
+ import uuid
++import subprocess
++import sys
+ from concurrent.futures import ThreadPoolExecutor
+ from pathlib import Path
+ from unittest.mock import patch
+@@ -120,3 +122,9 @@
+         self.assertEqual(response.status_code,413)
+         for value in ('invalid','-1'):
+             self.assertEqual(self.c.post('/api/auth/login',content=b'{}',headers={'content-length':value,'x-cq-request':'1'}).status_code,400)
++    def test_explicit_sqlite_path_never_uses_an_inherited_cloud_database(self):
++        path=str(Path(self.tmp.name)/'storage-boundary.sqlite3')
++        code="from careerquest.store import connect,create_profile,profile; c=connect("+repr(path)+"); pid=create_profile(c,'Storage Boundary Alias',11); assert profile(c,pid)['xp']==0; c.close()"
++        env=dict(os.environ,DATABASE_URL='postgresql://unreachable.invalid/must_not_connect')
++        result=subprocess.run([sys.executable,'-c',code],env=env,capture_output=True,text=True,timeout=10)
++        self.assertEqual(result.returncode,0,result.stderr);self.assertTrue(Path(path).is_file())

@@ -1,0 +1,8 @@
+.developer-research .spec-page { max-width:1000px;margin:auto;padding:32px 24px;color:#322642; }
+.developer-research label { display:block;font-size:18px;margin:20px 0 8px; }
+.developer-research input:not([type=checkbox]),.developer-research select,.developer-research textarea { width:100%;font-size:18px; }
+.developer-research .developer-checkbox { display:flex;gap:12px;align-items:center; }
+.developer-research p,.developer-research li { font-size:17px;line-height:1.6;overflow-wrap:anywhere; }
+.developer-research .panel { padding:25px;margin-block:24px; }
+.developer-research pre { white-space:pre-wrap;overflow-wrap:anywhere;font-size:15px; }
+.developer-research code { overflow-wrap:anywhere; }

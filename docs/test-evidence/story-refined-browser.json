@@ -1,0 +1,52 @@
+{
+  "check": "Browser walkthrough; forced missing-key deterministic fallback, no live Groq calls",
+  "initial_summary_words": 90,
+  "latest_summary_words": 93,
+  "history_versions": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "feedback_receipts": [
+    {
+      "verdict": "Yes",
+      "correction": ""
+    },
+    {
+      "verdict": "Somewhat",
+      "correction": "Keep technology, but I would prefer to explore art."
+    },
+    {
+      "verdict": "Not really",
+      "correction": "I prefer design. Please start from that interest."
+    },
+    {
+      "verdict": "Not really",
+      "correction": ""
+    }
+  ],
+  "raw_quest_count": 3,
+  "same_saved_choices_all_versions": true,
+  "quest_xp": 60,
+  "total_xp": 60,
+  "confirmed": false,
+  "manual_draft_interests": [
+    "biology"
+  ],
+  "latest_stated_interests": [
+    "biology"
+  ],
+  "remaining_revisions": 0,
+  "prior_recommendations_archived": true,
+  "gates": {
+    "/roadmap/propose": 409,
+    "/explore": 409
+  },
+  "final_manual_typed_interest_preserved": [
+    "astronomy"
+  ],
+  "final_total_xp": 60,
+  "final_story_count": 5
+}

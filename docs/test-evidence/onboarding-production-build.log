@@ -1,0 +1,13 @@
+
+> careerquest-ui@0.2.0 build
+> vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 1629 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.36 kB │ gzip:  0.26 kB
+dist/assets/index-DkiF48Y8.css  132.43 kB │ gzip: 25.96 kB
+dist/assets/index-JiDJBL2I.js   298.76 kB │ gzip: 89.45 kB
+✓ built in 1.06s

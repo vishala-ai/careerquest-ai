@@ -1,0 +1,9 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "legacy_metadata_checked": true,
+  "database_file_hash_unchanged": true
+}

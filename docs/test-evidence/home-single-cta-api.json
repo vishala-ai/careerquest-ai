@@ -1,0 +1,11 @@
+{
+  "fictional_profile_id": "7f3d36b3-c67d-451a-8a7a-3d1ff6c25af6",
+  "grade": 10,
+  "earned_xp": 70,
+  "unconfirmed_gates": {
+    "/explore": 409,
+    "/roadmap/propose": 409,
+    "/roadmap/save": 409
+  },
+  "blocked_requests_preserved_state": true
+}

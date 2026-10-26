@@ -1,0 +1,10 @@
+{
+  "method": "Isolated stylesheet media-condition emulation; OS/browser preference unchanged",
+  "normalNodeTransition": "0.16s, 0.16s, 0.16s",
+  "reduced": {
+    "flagTransform": "none",
+    "leafTransform": "none",
+    "nodeAnimation": "none",
+    "nodeTransition": "0s"
+  }
+}

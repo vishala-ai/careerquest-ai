@@ -1,0 +1,34 @@
+{
+  "bioengineering": {
+    "source": {"id":"onet-biomedical","title":"Bioengineers and Biomedical Engineers","source":"O*NET OnLine, 17-2031.00","url":"https://www.onetonline.org/link/summary/17-2031.00"},
+    "overview":"Explore how engineering and life science come together to develop and evaluate systems and products connected to health.",
+    "activities":["Design or evaluate devices and systems connected to health.","Use engineering and biological knowledge to investigate a problem."],
+    "skills":["Scientific investigation","Engineering design","Analytical thinking"],
+    "educational_fields":["Engineering","Biology","Chemistry","Computer science"],
+    "mission":"Sketch a fictional device that could make an everyday task easier. Label one question you would need to investigate. Do not test medical devices or give health advice."
+  },
+  "software": {
+    "source":{"id":"bls-software","title":"Software Developers, Quality Assurance Analysts, and Testers","source":"BLS Occupational Outlook Handbook","url":"https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm"},
+    "overview":"Explore how people design, build and test applications that help someone do a task.",
+    "activities":["Ask what users need and design software around those needs.","Test an application and document problems or improvements."],
+    "skills":["Programming","Analytical thinking","Team collaboration"],
+    "educational_fields":["Computer and information technology","Engineering","Mathematics"],
+    "mission":"Draw three screens for a tiny app that helps with a fictional everyday task. Write one test you would try."
+  },
+  "design": {
+    "source":{"id":"bls-digital-design","title":"Web Developers and Digital Designers","source":"BLS Occupational Outlook Handbook — related digital-interface work","url":"https://www.bls.gov/ooh/computer-and-information-technology/web-developers.htm"},
+    "overview":"Explore the look, layout and usability of digital interfaces. This world connects to digital-interface design; it is not a claim that every product-design role has the same requirements.",
+    "activities":["Create a prototype or mockup of an interface.","Test layouts and navigation to see how an interface works for a user."],
+    "skills":["Creativity","Communication","Attention to detail"],
+    "educational_fields":["Web design","Digital design","Graphic arts"],
+    "mission":"Sketch two versions of a fictional app screen. Explain which version makes its main action easier to find."
+  },
+  "environment": {
+    "source":{"id":"bls-environment","title":"Environmental Scientists and Specialists","source":"BLS Occupational Outlook Handbook","url":"https://www.bls.gov/ooh/life-physical-and-social-science/environmental-scientists-and-specialists.htm"},
+    "overview":"Explore how scientists investigate environmental questions, study data and communicate possible solutions.",
+    "activities":["Collect and analyze environmental information.","Prepare reports or presentations explaining research findings."],
+    "skills":["Data analysis","Communication","Problem solving"],
+    "educational_fields":["Environmental science","Natural resources","Biology","Physical science"],
+    "mission":"Choose a safe observation such as counting reusable bottles in a fictional classroom. Make a sample table and list one question the data could help explore."
+  }
+}

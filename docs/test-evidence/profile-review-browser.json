@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "mode": "isolated fictional database; explicitly labeled deterministic fallback, not live Groq",
+  "quest_summary": {
+    "profile_review_ctas": 1,
+    "feedback_radios": 0,
+    "proposed_profile_panels": 0
+  },
+  "profile_review": {
+    "personalized_heading": true,
+    "actual_choices_separate_from_suggestions": true,
+    "somewhat_preserved_agreed_interests": true,
+    "not_really_replaced_interests": true,
+    "manual_changes_reviewed_before_confirmation": true,
+    "confirmation_buttons_before_yes": 0,
+    "one_primary_confirmation_action": true,
+    "confirmed_profile_has_no_review_radios": true,
+    "reload_and_backend_restart_preserved_corrections": true,
+    "edited_profile_requires_reconfirmation": true,
+    "bounded_generation_limit_allows_explicit_manual_review": true
+  },
+  "xp": {
+    "after_quests": 60,
+    "after_revisions": 60,
+    "after_first_confirmation": 70,
+    "after_unchanged_reconfirmation": 70
+  },
+  "responsive": [
+    {
+      "primaryActions": [
+        "Confirm My Explorer Profile"
+      ],
+      "scrollWidth": 375,
+      "width": 375
+    },
+    {
+      "primaryActions": [
+        "Confirm My Explorer Profile"
+      ],
+      "scrollWidth": 768,
+      "width": 768
+    },
+    {
+      "primaryActions": [
+        "Confirm My Explorer Profile"
+      ],
+      "scrollWidth": 1279,
+      "width": 1279
+    }
+  ],
+  "keyboard_confirmation": "Enter passed",
+  "console_errors": [],
+  "unverified": [
+    "full screen-reader audit",
+    "live Groq feedback revisions through browser"
+  ]
+}

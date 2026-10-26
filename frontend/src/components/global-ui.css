@@ -1,0 +1,107 @@
+/* Final shared layer; existing emerald artwork and saved-work components remain. */
+.global-ui { --stage-accent:#6342b5;--stage-soft:#f2edfc;--stage-ink:#352350;font-size:18px;color:#243047; }
+.global-ui.accent-discover { --stage-accent:#6342b5;--stage-soft:#f2edfc; }
+.global-ui.accent-confirm { --stage-accent:#086f64;--stage-soft:#e9f6f2; }
+.global-ui.accent-explore { --stage-accent:#225d9b;--stage-soft:#edf4fd; }
+.global-ui.accent-celebrate { --stage-accent:#096149;--stage-soft:#edf8f1; }
+.global-ui .main-content { max-width:1160px;padding:0 24px;margin:auto; }
+.global-header { position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid #dbe1ed;box-shadow:0 3px 16px #24304708; }
+.global-header-top { max-width:1160px;padding:14px 24px;margin:auto;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:24px; }
+.global-ui .global-brand { color:#25324a;font-size:24px;background:transparent;border:0;display:inline-flex;align-items:center;gap:10px;padding:0;justify-self:start;min-height:44px; }
+.global-brand b { color:#6342b5; }
+.global-ui .global-brand .brand-symbol { display:grid;place-items:center;width:40px;height:40px;background:#6342b5;color:#fff;border-radius:13px;transform:none; }
+.xp-badge { position:relative;justify-self:start; }
+.xp-badge>summary { display:flex;align-items:center;gap:8px;cursor:pointer;background:#fff4d9;color:#684a11;border:1px solid #d8bd7b;border-radius:24px;padding:10px 14px;min-height:44px;font-size:15px;list-style:none; }
+.xp-badge>summary::-webkit-details-marker,.identity-menu>summary::-webkit-details-marker { display:none; }
+.xp-badge strong { font-size:17px; }
+.xp-badge>p { position:absolute;z-index:50;right:0;width:min(350px,calc(100vw - 32px));margin:10px 0 0;padding:20px;border-radius:16px;border:1px solid #d8bd7b;background:#fffdf6;color:#4a3e25;box-shadow:0 10px 30px #24304722;font-size:16px;line-height:1.6; }
+.identity-menu { position:relative;min-width:0; }
+.identity-menu>summary { display:flex;align-items:center;gap:10px;cursor:pointer;min-height:48px;list-style:none; }
+.identity-avatar { background:#eee9fa;display:grid;place-items:center;width:38px;height:38px;border-radius:50%;font-size:25px;flex-shrink:0; }
+.identity-copy { display:grid;gap:2px;max-width:200px; }
+.identity-copy strong { font-size:17px;color:#25324a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.identity-copy>span { font-size:15px;color:#53637b; }
+.identity-actions { position:absolute;z-index:55;right:0;width:min(280px,calc(100vw - 32px));margin-top:12px;padding:16px;background:#fff;border:1px solid #d4dbea;border-radius:18px;box-shadow:0 10px 32px #24304722; }
+.identity-actions p { margin:0 0 10px;font-size:15px;line-height:1.6;color:#53637b; }
+.identity-actions button { display:block;width:100%;text-align:left;background:transparent;border:0;color:#263751;font-size:17px;min-height:46px;padding:10px;border-radius:10px; }
+.identity-actions button:hover { background:#f2edfc; }
+.identity-actions details { border-top:1px solid #dbe1ed;padding-top:10px;margin-top:8px; }
+.identity-actions summary { font-size:15px;min-height:44px;display:flex;align-items:center;cursor:pointer; }
+.identity-actions .identity-review { color:#75510d;font-weight:700; }
+.global-create-explorer { color:#4c387e;background:#f6f2fc;border:1px solid #d4c8e6;padding:10px 14px;min-height:44px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:16px; }
+.global-navigation { max-width:1160px;margin:auto;padding:0 24px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px; }
+.global-navigation button { display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid transparent;border-radius:12px;padding:12px;color:#4e607b;background:#fff;font-size:17px;font-weight:650;line-height:1.4; }
+.global-navigation button:hover { background:#f4f6fb; }
+.global-navigation button.active { color:var(--stage-accent);background:var(--stage-soft);border-color:var(--stage-accent); }
+
+
+
+
+
+
+
+
+
+
+
+.global-review-notice { display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:8px 20px;border:0;border-top:1px solid #d9c68c;background:#fff7df;color:#694e18;font-size:15px;line-height:1.5;text-align:left;min-height:44px; }
+.global-review-notice svg { flex-shrink:0; }
+.global-ui :is(button,summary,a,input,select,textarea):focus-visible { outline:3px solid #1e628d;outline-offset:4px; }
+.global-ui .skip-link { z-index:100;background:#253e6e;color:#fff; }
+.global-ui .page-hero h1,.global-ui .welcome-copy h1 { font-size:36px;line-height:1.2;letter-spacing:-.025em; }
+.global-ui .page-hero .mission-instruction { color:#4b5b73;font-size:18px;line-height:1.65;max-width:850px; }
+.global-ui .page-hero .eyebrow { color:var(--stage-accent);font-size:15px;line-height:1.5;letter-spacing:.07em; }
+.global-ui .spec-page .eyebrow,.global-ui footer span { font-size:15px;line-height:1.6; }
+.global-ui .spec-page .profile-status { font-size:15px!important; }
+.global-ui .spec-page .choice-feedback { font-size:18px!important; }
+@media(max-width:600px){.global-ui .spec-page .choice-feedback{font-size:17px!important;}}
+.global-ui .profile-layout :is(p,label,input) { font-size:18px;line-height:1.65; }
+.global-ui .profile-layout :is(small,legend,label span,.grade-legend,.eyebrow,.saved-explorer strong) { font-size:15px;line-height:1.6; }
+.global-ui .profile-layout .button { font-size:17px;min-height:44px; }
+.global-ui .profile-layout>* { min-width:0; }
+.global-ui .profile-layout .panel-title>div { min-width:0; }
+.global-ui .profile-layout .avatar-picker { flex-wrap:wrap; }
+.global-ui .profile-layout .grade-picker button { min-width:0;padding:12px 4px; }
+.global-ui .profile-layout .grade-picker small { letter-spacing:0; }
+.global-ui .profile-layout .button { white-space:normal; }
+.global-ui .spec-page :is(p,li,label,textarea,input,select),.global-ui .welcome-page p { font-size:18px;line-height:1.65; }
+.global-ui .spec-page :is(small,.small-note,.profile-support,.discovery-interest,.source-list small,.source-list a),.global-ui .demo-banner,.global-ui footer,.global-ui footer button { font-size:15px;line-height:1.6; }
+.global-ui .spec-page :is(h2,.quest-panel h2) { font-size:28px;line-height:1.3; }
+.global-ui .spec-page h3 { font-size:21px;line-height:1.4; }
+.global-ui .spec-page .button,.global-ui .spec-page button:not(.quest-index):not(.choice-tile):not(.text-button),.global-ui .welcome-page .button { font-size:17px;min-height:44px; }
+.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio) { padding:28px; }
+.global-ui .spec-page :is(input,select,textarea) { max-width:100%; }
+.global-ui .spec-page button,.global-ui .spec-page summary { overflow-wrap:anywhere; }
+.global-ui .spec-page .button:not(.secondary):not(.ghost) { background:var(--stage-accent);border-color:var(--stage-accent); }
+.global-ui .discovery-page .choice-tile { min-height:90px; }
+.global-ui .discovery-page .choice-tile strong,.global-ui .discovery-page .quest-index strong { font-size:18px;line-height:1.5; }
+.global-ui .discovery-page .quest-index small,.global-ui .discovery-page .quest-meta,.global-ui .discovery-page .xp-pill { font-size:15px;line-height:1.5;letter-spacing:0; }
+.global-ui .spec-page .interest-picker button,.global-ui .profile-choice-actions button { font-size:17px;min-height:44px; }
+.global-ui .career-discovery-milestone h1 { font-size:36px; }
+.global-ui .career-discovery-milestone button:focus-visible { outline-color:#ffe3a1; }
+.global-ui .student-trail .trail-stops { grid-template-columns:repeat(var(--trail-count,4),minmax(0,1fr)); }
+.global-ui .welcome-page .welcome-saved-facts { display:none; } /* Header owns identity and points. */
+.global-ui .welcome-page .welcome-demo-note { display:none; } /* Shared demo notice stays visible. */
+.global-ui.accent-explore .career-world-card:not(.world-environment){background:linear-gradient(145deg,#edf4fd,#fff 75%);border-color:#c9dcee;}
+.global-ui.accent-explore .career-world-label,.global-ui.accent-explore .career-world-reason{color:#23558b;}
+.global-ui [id],.global-ui h1 { scroll-margin-top:var(--header-offset,160px); }
+@media(max-width:800px){.global-header-top{padding:12px 20px;gap:14px;}.global-brand{font-size:22px!important;}.identity-avatar{display:none;}.identity-copy{max-width:150px;}.global-navigation{padding:0 20px 10px;}.global-ui .student-trail .trail-stops{display:flex;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:24px;}}
+@media(max-width:600px){.global-header-top{grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:10px 16px;}.global-ui .global-brand{font-size:20px!important;gap:7px;}.global-ui .global-brand .brand-symbol{width:32px;height:32px;border-radius:10px;}.global-brand svg{width:21px;}.identity-menu{grid-column:2;grid-row:1;}.identity-menu>summary{gap:4px;}.identity-copy{max-width:120px;}.identity-copy strong,.identity-copy>span{font-size:15px;}.xp-badge{grid-column:1/-1;grid-row:2;}.xp-badge>summary{padding:7px 12px;min-height:40px;font-size:15px;}.xp-badge>p{left:0;right:auto;}.global-create-explorer{font-size:15px;padding:8px;max-width:140px;}.global-navigation{gap:4px;padding:0 12px 8px;}.global-navigation button{font-size:17px;gap:4px;padding:8px 4px;flex-direction:column;min-height:64px;}.global-navigation button svg{width:17px;height:17px;}.global-ui .main-content{padding:0 16px;}.global-ui .page-hero h1,.global-ui .welcome-copy h1,.global-ui .career-discovery-milestone h1{font-size:28px;}.global-ui .spec-page :is(p,li,label,textarea,input,select),.global-ui .page-hero .mission-instruction,.global-ui .welcome-page p,.global-ui .profile-layout :is(p,label,input){font-size:17px;}.global-ui .spec-page :is(small,.small-note,.profile-support,.discovery-interest,.source-list small,.source-list a){font-size:15px;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:22px;}.global-ui .spec-page h2{font-size:24px;}.global-ui .spec-page h3{font-size:20px;}.global-ui .demo-banner{font-size:15px;}.global-review-notice{padding:7px 16px;font-size:15px;}.global-ui [id],.global-ui h1{scroll-margin-top:var(--header-offset,220px);}}
+@media(prefers-reduced-motion:reduce){.global-ui *,.global-ui *::before,.global-ui *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
+/* Focused Home/header refinement; Portfolio and workflow components stay intact. */
+.global-ui .welcome-copy h1{font-size:38px;line-height:1.2;color:#17213D;overflow-wrap:anywhere}
+.global-ui .welcome-page p{line-height:1.6}
+.global-ui .welcome-page .welcome-reassurance{font-size:16px;line-height:1.6}
+.global-ui .global-brand,.global-navigation button,.identity-menu>summary,.identity-actions button,.xp-badge>summary,.global-create-explorer,.global-review-notice,.identity-actions summary{min-height:48px}
+.global-navigation button{font-size:17px}
+.identity-actions{max-height:calc(100dvh - var(--header-offset,160px) - 12px);overflow-y:auto;overscroll-behavior:contain}
+.global-ui :is(button,a,input,select,textarea,summary){scroll-margin-top:var(--header-offset,160px);scroll-margin-bottom:20px}
+.global-ui .welcome-page{--welcome-violet:#6D28D9;--welcome-ink:#17213D;--welcome-muted:#4f5d71}
+@media(max-width:760px){.global-header-top{grid-template-columns:minmax(0,1fr) auto;gap:8px 14px}.identity-menu{grid-column:2;grid-row:1}.xp-badge{grid-column:1/-1;grid-row:2}.xp-badge>p{left:0;right:auto}}
+@media(max-width:600px){.global-ui .welcome-copy h1{font-size:30px}.global-navigation button{font-size:16px}.global-ui .welcome-page .trail-details p{font-size:17px}.identity-copy{max-width:120px}.identity-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media(max-height:500px){.global-header{position:relative}.global-ui{--header-offset:16px!important}}
+
+.global-ui .main-content.is-welcome footer button,.global-ui .main-content.is-welcome .alert button{min-height:48px}.global-ui .main-content.is-welcome .alert button{min-width:48px}
+
+.global-ui .main-content.is-welcome footer,.global-ui .main-content.is-welcome footer button,.global-ui .main-content.is-welcome footer span:first-child{color:#4f5d71}

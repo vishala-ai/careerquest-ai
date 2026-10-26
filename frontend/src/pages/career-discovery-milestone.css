@@ -1,0 +1,45 @@
+.career-discovery-milestone { position:relative;isolation:isolate;overflow:hidden;margin:12px 0 36px;padding:clamp(24px,4vw,54px);border-radius:32px;background:radial-gradient(ellipse at 90% 10%,#117952 0,transparent 50%),linear-gradient(140deg,#063e34,#09523d 70%,#07674a);color:#fff; }
+.career-discovery-milestone * { box-sizing:border-box; }
+.milestone-glow { position:absolute;z-index:-1;width:500px;height:500px;right:-160px;top:-120px;border:1px solid #6fe9ad33;border-radius:50%;box-shadow:0 0 0 60px #58c9940c,0 0 0 120px #58c99408; }
+.milestone-hero { display:grid;grid-template-columns:1.1fr 1fr;gap:20px;align-items:center; }
+.milestone-eyebrow { display:inline-flex;align-items:center;gap:10px;color:#fff4cf;font-size:15px;font-weight:800;letter-spacing:.1em;line-height:1.5; }
+.career-discovery-milestone h1 { color:#fff;font-size:clamp(34px,4.4vw,58px);line-height:1.08;letter-spacing:-.04em;margin:22px 0;overflow-wrap:anywhere; }
+.career-discovery-milestone p { font-size:18px;line-height:1.65;color:inherit;overflow-wrap:anywhere; }
+.career-discovery-milestone .milestone-subtitle { color:#fff4d6;font-size:24px;line-height:1.4;font-weight:650; }
+.milestone-welcome>p:last-child { color:#dcf3e8;max-width:540px; }
+.milestone-scene { display:block;width:100%;height:auto;max-height:350px;overflow:visible; }
+.milestone-stats { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:28px 0 12px; }
+.milestone-stat { display:grid;grid-template-columns:1fr auto;gap:8px 12px;border-radius:22px;background:#fff;color:#153f31;padding:24px;box-shadow:0 8px 22px #002c2526; }
+.milestone-stat svg { grid-column:2;grid-row:1;color:#0d7954; }
+.milestone-stat dt { font-size:17px;line-height:1.5;grid-column:1;grid-row:1; }
+.milestone-stat dd { grid-column:1/-1;font-size:42px;line-height:1.1;font-weight:800;margin:0; }
+.career-discovery-milestone .milestone-count-scope { color:#e4f4ec;font-size:15px; }
+.milestone-portfolio-card { background:#fff;color:#193e32;border-radius:26px;padding:32px;margin-top:30px; }
+.milestone-card-heading { display:flex;gap:16px;align-items:center; }
+.milestone-card-heading>span { display:grid;place-items:center;flex-shrink:0;width:58px;height:58px;border-radius:18px;background:#e4f4ec;color:#096144; }
+.career-discovery-milestone h2 { font-size:28px;line-height:1.25;color:inherit;margin:0; }
+.career-discovery-milestone .milestone-card-kicker { font-size:15px;font-weight:800;letter-spacing:.08em;color:#29684f;margin:0 0 6px; }
+.milestone-how { padding:0;margin:24px 0 0;list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px; }
+.milestone-how li { border-top:1px solid #d4e8dc;padding-top:20px; }
+.milestone-how svg { color:#147352;margin-bottom:12px; }
+.milestone-how h3 { font-size:20px;line-height:1.4;margin:0;color:#193e32; }
+.milestone-how p { font-size:17px;line-height:1.65; }
+.milestone-reminder { display:flex;gap:16px;align-items:flex-start;padding:22px;border:1px solid #9fd6b766;background:#064936;border-radius:20px;margin:28px 0; }
+.milestone-reminder svg { flex-shrink:0;color:#ffe09a;margin-top:4px; }
+.milestone-actions { text-align:center;margin-top:30px; }
+.career-discovery-milestone .button { font-size:18px;min-height:50px;white-space:normal;line-height:1.4;justify-content:center; }
+.career-discovery-milestone .milestone-primary { background:#ffdd80;color:#163e30;border:2px solid #ffdd80;min-height:60px;padding:16px 28px;font-weight:800;border-radius:18px; }
+.career-discovery-milestone .milestone-primary:hover:not(:disabled) { background:#ffebad;border-color:#ffebad; }
+.career-discovery-milestone .milestone-primary:disabled { opacity:1;background:#527664;color:#fff;border-color:#759884;cursor:not-allowed; }
+.milestone-actions>div { display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:18px; }
+.career-discovery-milestone .milestone-secondary { color:#fff;background:#084a37;border:1px solid #a4d3b9;padding:12px 20px; }
+.career-discovery-milestone .milestone-secondary:hover { background:#126344; }
+.milestone-actions>p { font-size:15px;color:#def0e5; }
+.career-discovery-milestone button:focus-visible { outline:3px solid #ffe3a1;outline-offset:5px; }
+.milestone-gate,.milestone-error { display:flex;gap:18px;background:#fff5d8;color:#3f3b1e;padding:24px;border-radius:20px;margin:22px 0; }
+.milestone-gate>svg { flex-shrink:0; }
+.milestone-error { display:block; }
+@media(prefers-reduced-motion:no-preference){.career-discovery-milestone:not(.is-returning) .milestone-art-star{animation:milestone-star-arrive 400ms ease-out both;}@keyframes milestone-star-arrive{from{opacity:0;}to{opacity:1;}}}
+@media(prefers-reduced-motion:reduce){.career-discovery-milestone,.career-discovery-milestone *{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+@media(max-width:800px){.milestone-hero{grid-template-columns:1fr;}.milestone-scene{max-height:245px;margin-top:-12px;}.milestone-how{grid-template-columns:1fr;gap:14px;}.milestone-stats{gap:12px;}.milestone-stat{padding:18px;}.milestone-stat svg{display:none;}.milestone-stat dt{font-size:16px;}}
+@media(max-width:500px){.career-discovery-milestone{padding:25px 20px;border-radius:24px;}.career-discovery-milestone h1{font-size:36px;}.career-discovery-milestone p{font-size:17px;}.career-discovery-milestone .milestone-subtitle{font-size:21px;}.milestone-stats{grid-template-columns:1fr;}.milestone-stat{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;}.milestone-stat dd{font-size:34px;}.milestone-portfolio-card{padding:24px 20px;}.career-discovery-milestone h2{font-size:24px;}.milestone-card-heading{align-items:flex-start;}.milestone-card-heading>span{width:42px;height:42px;border-radius:12px;}.milestone-card-heading svg{width:24px;}.milestone-actions>div{display:grid;}.career-discovery-milestone .button{font-size:17px;}.milestone-reminder{padding:18px;}.milestone-gate{padding:20px;gap:12px;}.milestone-eyebrow{font-size:15px;letter-spacing:.05em;}}

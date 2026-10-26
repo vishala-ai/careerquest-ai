@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "preexisting_tables_unchanged": true,
+  "row_counts_before": {
+    "profiles": 5,
+    "events": 44,
+    "plans": 7,
+    "runs": 42,
+    "discovery_stories": 7,
+    "discovery_feedback": 7,
+    "discovery_adjustments": 2,
+    "discovery_story_context": 6,
+    "discovery_agent_sessions": 4,
+    "discovery_agent_turns": 4,
+    "discovery_agent_decisions": 7,
+    "discovery_agent_preferences": 0
+  },
+  "new_tables": [
+    "discovery_handoffs"
+  ],
+  "approved_catalogue_worlds": 4,
+  "profile_read_did_not_backfill_handoff": true,
+  "backend_port": 8000,
+  "final_code_restart": "passed",
+  "final_restart_all_rows_unchanged": true,
+  "isolated_test_server_stopped": true
+}

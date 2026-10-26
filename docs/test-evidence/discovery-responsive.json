@@ -1,0 +1,47 @@
+[
+  {
+    "columns": "295.762px",
+    "scrollWidth": 375,
+    "titleSize": "29px",
+    "width": 375
+  },
+  {
+    "radios": [
+      {
+        "checked": false,
+        "disabled": true,
+        "value": "on"
+      },
+      {
+        "checked": false,
+        "disabled": true,
+        "value": "on"
+      },
+      {
+        "checked": true,
+        "disabled": true,
+        "value": "on"
+      },
+      {
+        "checked": false,
+        "disabled": true,
+        "value": "on"
+      }
+    ],
+    "scrollWidth": 375,
+    "view": "saved answer",
+    "width": 375
+  },
+  {
+    "columns": "676.895px",
+    "scrollWidth": 768,
+    "titleSize": "34px",
+    "width": 768
+  },
+  {
+    "columns": "367.578px 367.588px 367.588px",
+    "scrollWidth": 1280,
+    "titleSize": "38px",
+    "width": 1280
+  }
+]

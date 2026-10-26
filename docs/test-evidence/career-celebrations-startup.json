@@ -1,0 +1,14 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "developer_access_status": 403,
+  "all_preexisting_database_rows_unchanged": true,
+  "new_empty_tables": {
+    "career_milestones": 0,
+    "career_portfolio_completions": 0
+  },
+  "backend_port": 8000
+}

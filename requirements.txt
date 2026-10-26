@@ -1,0 +1,3 @@
+streamlit>=1.38,<2
+langgraph>=0.3,<2
+python-dotenv>=1,<2

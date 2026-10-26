@@ -1,0 +1,20 @@
+[
+  {
+    "feedbackWidth": 295.76171875,
+    "scrollWidth": 375,
+    "width": 375,
+    "worldColumns": "295.762px"
+  },
+  {
+    "feedbackWidth": 676.89453125,
+    "scrollWidth": 768,
+    "width": 768,
+    "worldColumns": "676.895px"
+  },
+  {
+    "feedbackWidth": 1142.75390625,
+    "scrollWidth": 1280,
+    "width": 1280,
+    "worldColumns": "370.254px 370.254px 370.254px"
+  }
+]

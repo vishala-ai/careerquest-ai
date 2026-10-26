@@ -1,0 +1,275 @@
+{
+  "synthetic_only": true,
+  "created_at": "2026-10-25T20:35:35.521578+00:00",
+  "preparation": "Fictional group-demo fixtures: saved quest choices and explicit seeded profile confirmations. Not real student submissions or AI-generated biographies. No research/shortlist/path/portfolio was selected for them.",
+  "profiles": [
+    {
+      "alias": "Demo G9 - Canvas Comet",
+      "grade": 9,
+      "focus": "Digital art and creative apps",
+      "interests": [
+        "art",
+        "creative",
+        "design"
+      ],
+      "choices": [
+        "Sketch an invention",
+        "Design a campaign poster",
+        "Create a visual story"
+      ],
+      "learning_style": "Creative activities",
+      "goal": "Try a mini-project",
+      "id": "ac933a55-034a-4976-818a-0b28c296a658",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "software",
+          "title": "Software Development"
+        },
+        {
+          "id": "design",
+          "title": "Digital Product Design"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G9 - Nature Scout",
+      "grade": 9,
+      "focus": "Nature, biology and discovery",
+      "interests": [
+        "nature",
+        "biology",
+        "research"
+      ],
+      "choices": [
+        "Investigate a science mystery",
+        "Analyze the data",
+        "Research and test ideas"
+      ],
+      "learning_style": "Research and reading",
+      "goal": "Explore high-school preparation",
+      "id": "c3ce3d34-4ef2-48e6-aa23-1516c94eb22e",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "bioengineering",
+          "title": "Biomedical Engineering"
+        },
+        {
+          "id": "environment",
+          "title": "Environmental Science"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G10 - Byte Builder",
+      "grade": 10,
+      "focus": "Coding, logic and prototypes",
+      "interests": [
+        "coding",
+        "math",
+        "building"
+      ],
+      "choices": [
+        "Build a mini-app",
+        "Build a tracking tool",
+        "Build something"
+      ],
+      "learning_style": "Hands-on projects",
+      "goal": "Try a mini-project",
+      "id": "b5f0078e-49b4-4fdb-97ba-647d36a08a8c",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "bioengineering",
+          "title": "Biomedical Engineering"
+        },
+        {
+          "id": "software",
+          "title": "Software Development"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G10 - Design Wave",
+      "grade": 10,
+      "focus": "Designing useful experiences for people",
+      "interests": [
+        "art",
+        "design",
+        "people"
+      ],
+      "choices": [
+        "Sketch an invention",
+        "Interview classmates",
+        "Collaborate with a team"
+      ],
+      "learning_style": "Team collaboration",
+      "goal": "Explore careers and college majors",
+      "id": "e4d7eed1-b2f6-4394-9477-64b17bd70419",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "design",
+          "title": "Digital Product Design"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G11 - Bio Prism",
+      "grade": 11,
+      "focus": "Biology and engineering ideas",
+      "interests": [
+        "biology",
+        "engineering",
+        "science"
+      ],
+      "choices": [
+        "Investigate a science mystery",
+        "Build a tracking tool",
+        "Research and test ideas"
+      ],
+      "learning_style": "Hands-on projects",
+      "goal": "Explore careers and college majors",
+      "id": "112a1110-b569-416a-8856-7dd1f9447b9f",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "bioengineering",
+          "title": "Biomedical Engineering"
+        },
+        {
+          "id": "environment",
+          "title": "Environmental Science"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G11 - Climate Grove",
+      "grade": 11,
+      "focus": "Environmental research and community projects",
+      "interests": [
+        "nature",
+        "research",
+        "helping"
+      ],
+      "choices": [
+        "Organize a community activity",
+        "Analyze the data",
+        "Collaborate with a team"
+      ],
+      "learning_style": "Research and reading",
+      "goal": "Try a mini-project",
+      "id": "96582200-14df-4f4f-b2b6-9d8fb854e904",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "environment",
+          "title": "Environmental Science"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G12 - Systems Orbit",
+      "grade": 12,
+      "focus": "Software and engineering systems",
+      "interests": [
+        "technology",
+        "coding",
+        "engineering"
+      ],
+      "choices": [
+        "Build a mini-app",
+        "Analyze the data",
+        "Build something"
+      ],
+      "learning_style": "Hands-on projects",
+      "goal": "Explore careers and college majors",
+      "id": "58b88a01-98d2-4ac1-8d37-a807500c63e3",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "bioengineering",
+          "title": "Biomedical Engineering"
+        },
+        {
+          "id": "software",
+          "title": "Software Development"
+        },
+        {
+          "id": "design",
+          "title": "Digital Product Design"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    },
+    {
+      "alias": "Demo G12 - Creative Flux",
+      "grade": 12,
+      "focus": "Creative design and communicating ideas",
+      "interests": [
+        "creative",
+        "design",
+        "people"
+      ],
+      "choices": [
+        "Sketch an invention",
+        "Design a campaign poster",
+        "Create a visual story"
+      ],
+      "learning_style": "Creative activities",
+      "goal": "Try a mini-project",
+      "id": "c5dc63fa-880e-4826-b234-5a78e36f9476",
+      "quest_count": 3,
+      "confirmed": true,
+      "xp": 70,
+      "suggested_career_worlds": [
+        {
+          "id": "software",
+          "title": "Software Development"
+        },
+        {
+          "id": "design",
+          "title": "Digital Product Design"
+        }
+      ],
+      "shortlisted_careers": 0,
+      "saved_path_versions": 0,
+      "saved_portfolio_versions": 0
+    }
+  ]
+}

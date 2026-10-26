@@ -1,0 +1,20 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "all_preexisting_rows_unchanged": true,
+  "preexisting_table_counts": {
+    "profiles": 5,
+    "events": 43,
+    "plans": 7,
+    "runs": 42,
+    "discovery_stories": 6,
+    "discovery_feedback": 5,
+    "discovery_adjustments": 2,
+    "discovery_story_context": 5
+  },
+  "schema": "Four additive discovery-agent tables; existing tables and rows retained",
+  "live_model_requests_during_restart": 0
+}

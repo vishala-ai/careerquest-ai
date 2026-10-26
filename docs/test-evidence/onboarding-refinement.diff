@@ -1,0 +1,827 @@
+--- a/README.md
++++ b/README.md
+@@ -1,4 +1,6 @@
+ # CareerQuest AI — High School to College Adventure
++
++Welcome now distinguishes fresh sessions, remembered browser explorers with no selection, and active Adventure Home. Welcome and Switch Explorer share avatar/nickname/explicit-grade/fictional-acknowledgment setup. `POST /api/profiles` now requires `alias`, integer `grade` (9–12), and `fictional_ack: true`; React also sends a UUID `creation_key`, whose durable SQLite receipt prevents duplicate profiles after retries. No setup XP or profile confirmation is awarded. Avatars and explorer associations remain browser-local demo metadata. See the [onboarding diff](docs/test-evidence/onboarding-refinement.diff), [verification results](docs/test-evidence/onboarding-verification.json), and [first-time screenshot](docs/test-evidence/onboarding-first-time-desktop.jpg).
+ 
+ Adventure Home now has portfolio-aware messaging and a brighter four-stage trail. The shared header has one four-item navigation menu; its duplicate progress strip is removed. Current saved portfolios show a completed trail with View My Portfolio, while older snapshots remain distinct and revisitable. See [focused Home/header verification, diff and screenshots](docs/HOME_HEADER_REFINEMENT_VERIFICATION.md).
+ 
+--- a/careerquest/api.py
++++ b/careerquest/api.py
+@@ -6,6 +6,7 @@
+ from fastapi.responses import Response
+ from pydantic import BaseModel,Field,model_validator
+ from typing import Literal
++from uuid import UUID
+ from . import discovery_guide
+ from . import discovery_agent
+ from . import discovery_handoff
+@@ -44,8 +45,16 @@
+         successful=[r for r in research if r.get('status')=='ok']
+         return {'profile':p,'quest_count':len(done),'quest_complete':len(done)==len(QUESTS),**review,'discovery':discovery_state(pid,es,review['quest_answers']),'discovery_guide':discovery_guide.guide_state(c,pid),'discovery_agent':discovery_agent.present(c,pid),'discovery_outcome':discovery_handoff.outcome(c,pid),'discovery_handoff':discovery_handoff.handoff_state(c,pid),'research_count':len(successful),'last_research':successful[-1] if successful else None,'reflection_count':sum(e['kind']=='reflection' for e in es),'latest_plan':latest_plan(c,pid),'events':es[-30:]}
+ class New(BaseModel):
+-    alias:str=Field(default='Demo Explorer',min_length=2,max_length=40)
+-    grade:int=Field(default=11,ge=9,le=12)
++    alias:str=Field(min_length=2,max_length=40)
++    grade:int=Field(ge=9,le=12,strict=True)
++    fictional_ack:bool=Field(strict=True)
++    creation_key:UUID|None=None
++    @model_validator(mode='after')
++    def validate_setup(self):
++        if self.fictional_ack is not True:raise ValueError('Confirm that this explorer uses fictional information only')
++        self.alias=self.alias.strip()
++        if len(self.alias)<2:raise ValueError('Enter a fictional nickname of at least two characters')
++        return self
+ class Choice(BaseModel):
+     option:str
+     revise:bool=False
+@@ -118,7 +127,9 @@
+     return {'handoff_id':handoff['id'],'handoff_version':handoff['version'],'profile_version':handoff['profile_version'],'career_worlds':handoff['career_worlds'],'all_worlds':discovery_handoff.catalogue(),'exploratory':handoff['exploratory']}
+ @app.post('/api/profiles')
+ def create(x:New):
+-    with db() as c:pid=create_profile(c,x.alias,x.grade)
++    try:
++        with db() as c:pid=create_profile(c,x.alias,x.grade,request_key=str(x.creation_key) if x.creation_key else None)
++    except ValueError as error:raise HTTPException(409,str(error))
+     return state(pid)
+ @app.get('/api/profiles/{pid}')
+ def get(pid:str):return state(pid)
+--- a/careerquest/store.py
++++ b/careerquest/store.py
+@@ -7,6 +7,7 @@
+     path=Path(path);path.parent.mkdir(parents=True,exist_ok=True)
+     c=sqlite3.connect(path);c.row_factory=sqlite3.Row;c.execute('PRAGMA foreign_keys=ON')
+     c.executescript('''CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,alias TEXT NOT NULL,grade INTEGER NOT NULL CHECK(grade BETWEEN 9 AND 12),interests TEXT NOT NULL,xp INTEGER NOT NULL DEFAULT 0);
++    CREATE TABLE IF NOT EXISTS explorer_creation_receipts(request_key TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),request_payload TEXT NOT NULL);
+     CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,kind TEXT NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL);
+     CREATE TABLE IF NOT EXISTS plans(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,version INTEGER NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version));
+     CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL,action TEXT NOT NULL,result TEXT NOT NULL,created_at TEXT NOT NULL);
+@@ -25,9 +26,21 @@
+     CREATE TABLE IF NOT EXISTS career_path_preferences(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version));
+     CREATE TABLE IF NOT EXISTS career_milestones(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),kind TEXT NOT NULL,source_id TEXT NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),payload TEXT NOT NULL,created_at TEXT NOT NULL,delivered_at TEXT,acknowledged_at TEXT,UNIQUE(profile_id,kind));
+     CREATE TABLE IF NOT EXISTS career_portfolio_completions(id TEXT PRIMARY KEY,profile_id TEXT NOT NULL REFERENCES profiles(id),version INTEGER NOT NULL,confirmation_event_id TEXT NOT NULL REFERENCES events(id),profile_version INTEGER NOT NULL,path_preference_id TEXT NOT NULL REFERENCES career_path_preferences(id),signature TEXT NOT NULL,content TEXT NOT NULL,created_at TEXT NOT NULL,UNIQUE(profile_id,version),UNIQUE(profile_id,signature));''');c.commit();return c
+-def create_profile(c,alias='Demo Explorer',grade=11):
++def create_profile(c,alias='Demo Explorer',grade=11,request_key=None):
+     if not 9<=int(grade)<=12:raise ValueError('Grade 9–12 only')
+-    pid=str(uuid.uuid4());c.execute('INSERT INTO profiles VALUES(?,?,?,?,?)',(pid,alias,int(grade),'[]',0));c.commit();return pid
++    payload=json.dumps({'alias':alias,'grade':int(grade)},sort_keys=True)
++    # Serialize retries and the first insert together, including across workers.
++    with c:
++        c.execute('BEGIN IMMEDIATE')
++        if request_key:
++            old=c.execute('SELECT * FROM explorer_creation_receipts WHERE request_key=?',(request_key,)).fetchone()
++            if old:
++                if old['request_payload']!=payload:raise ValueError('Creation request changed. Start a new Explorer setup.')
++                return old['profile_id']
++        pid=str(uuid.uuid4())
++        c.execute('INSERT INTO profiles VALUES(?,?,?,?,?)',(pid,alias,int(grade),'[]',0))
++        if request_key:c.execute('INSERT INTO explorer_creation_receipts VALUES(?,?,?)',(request_key,pid,payload))
++    return pid
+ def profile(c,pid):
+     row=c.execute('SELECT * FROM profiles WHERE id=?',(pid,)).fetchone()
+     if not row:raise KeyError('Unknown profile')
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -5,13 +5,14 @@
+ import AppShell from './components/AppShell';
+ import {studentExperience} from './studentExperience';
+ import Welcome from './pages/Welcome';
++import ExplorerSelection from './components/ExplorerSelection';
++import {availableExplorers,creationRequest,finishCreation} from './explorerSetup';
+ import DiscoveryQuests from './pages/DiscoveryQuests';
+ import ExplorerProfile from './pages/ExplorerProfile';
+ import UnsavedChanges from './components/UnsavedChanges';
+ import CareerWorlds from './pages/CareerWorlds';
+ import {Button, PageHeading, Gate, Sources, ActivityTimeline} from './components/Shared';
+ 
+-const AVATARS = ['🧭', '🚀', '🌱', '🎨', '🔬', '🪐'];
+ 
+ export default function App() {
+   const [pid, setPid] = useState(localStorage.getItem('cq_pid') || '');
+@@ -29,12 +30,10 @@
+   const [loading, setLoading] = useState(true);
+   const [busy, setBusy] = useState(false);
+   const [error, setError] = useState('');
++  const [entryError,setEntryError]=useState(false);
+   const [notice, setNotice] = useState('');
+   const [explorers, setExplorers] = useState(readExplorers);
+-  const [alias, setAlias] = useState('');
+-  const [grade, setGrade] = useState(11);
+-  const [avatar, setAvatar] = useState('🧭');
+-  const [fictional, setFictional] = useState(false);
++  const [explorerView,setExplorerView]=useState('switch');
+   const [profileValues,setProfileValues]=useState(()=>profileForm(null));
+   const [questDirty,setQuestDirty]=useState(false);
+   const [interestPending,setInterestPending]=useState(false);
+@@ -47,18 +46,19 @@
+   const [fail, setFail] = useState(false);
+ 
+   const profileDirty=page==='confirm' && state && !state.confirmed && (interestPending || JSON.stringify(profileValues)!==JSON.stringify(profileForm(state)));
+-  const route=next=>{if(['worlds','portfolio','celebrate'].includes(next)){setWorldsEntry(value=>value+1);setCareerEntry(next==='celebrate'?'milestone':next==='portfolio'?'auto':'worlds');setCareerScreen(next==='worlds'?'worlds':next==='celebrate'?'milestone':'portfolio');}setPage(next==='celebrate'?'portfolio':next);setError('');setNotice('');window.scrollTo({top:0,behavior:'instant'});};
++  const route=next=>{if(['worlds','portfolio','celebrate'].includes(next)){setWorldsEntry(value=>value+1);setCareerEntry(next==='celebrate'?'milestone':next==='portfolio'?'auto':'worlds');setCareerScreen(next==='worlds'?'worlds':next==='celebrate'?'milestone':'portfolio');}if(next==='profiles')setExplorerView('switch');setPage(next==='celebrate'?'portfolio':next);setError('');setNotice('');window.scrollTo({top:0,behavior:'instant'});};
+   const navigate=next=>{if(busy)return;if(next!==page && (profileDirty||questDirty)){setPendingNav(next);return;}route(next);};
+   const hydrate=data=>setProfileValues(profileForm(data));
+-  const apply = (data, icon) => {activeExplorer.current=data.profile.id;setState(data); setPid(data.profile.id); setExplorers(rememberExplorer(data, icon));};
++  const apply = (data, icon) => {activeExplorer.current=data.profile.id;setState(data); setPid(data.profile.id); const saved=rememberExplorer(data,icon).find(item=>item.id===data.profile.id);setExplorers(current=>[saved,...current.filter(item=>item.id!==saved.id)]);};
+   async function action(fn) {
+     setBusy(true); setError(''); setNotice('');
+     try {return await fn();} catch (err) {setError(err.message);return null;} finally {setBusy(false);}
+   }
+   async function load() {
+-    setLoading(true); setError('');
++    setLoading(true); setError('');setEntryError(false);
+     try {
+       setQuests(await api('/quests'));
++      setExplorers(await availableExplorers(readExplorers(),id=>api(`/profiles/${encodeURIComponent(id)}`)));
+       if (pid) {
+         try {const saved = await api(`/profiles/${pid}`); apply(saved); hydrate(saved); setResult(saved.last_research);}
+         catch (err) {
+@@ -67,7 +67,7 @@
+           setNotice('That explorer is no longer available. Choose a saved explorer or create a new one.');
+         }
+       }
+-    } catch (err) {setError(`Couldn’t connect to your journey. ${err.message}`);} finally {setLoading(false);}
++    } catch (err) {setEntryError(true);setError(`Couldn’t connect to your journey. ${err.message}`);} finally {setLoading(false);}
+   }
+   useEffect(() => {load();}, []);
+   const career=careerRecord?.pid===pid&&careerRecord.profileVersion===state?.profile_version&&careerRecord.confirmed===state?.confirmed?careerRecord.data:null;
+@@ -90,11 +90,6 @@
+   useEffect(()=>{const protect=event=>{event.preventDefault();event.returnValue='';};if(profileDirty||questDirty||reflection.trim()){window.addEventListener('beforeunload',protect);return()=>window.removeEventListener('beforeunload',protect);}},[profileDirty,questDirty,reflection]);
+   useEffect(() => {if (proposal?.plan) document.getElementById('roadmap-proposal')?.scrollIntoView({behavior: 'smooth', block: 'start'});}, [proposal]);
+ 
+-  const create = event => {event.preventDefault(); action(async () => {
+-    const data = await api('/profiles', 'POST', {alias: alias.trim(), grade: Number(grade)});
+-    apply(data, avatar); hydrate(data); setResult(null); setProposal(null); setReflection(''); setModel(false); setFail(false);
+-    setAlias(''); setFictional(false); setCreatedProfileId(data.profile.id); route('welcome'); setNotice('Your explorer is ready. Your first discovery quest is waiting.');
+-  });};
+   const selectExplorer = id => action(async () => {
+     const saved = await api(`/profiles/${id}`); setCreatedProfileId(''); apply(saved); hydrate(saved); setResult(saved.last_research); setProposal(null); setReflection(''); setModel(false); setFail(false); route('welcome');
+   });
+@@ -103,8 +98,8 @@
+     creatingFromWelcome.current=true;
+     try {
+       return await action(async()=>{
+-        const data=await api('/profiles','POST',{alias:values.nickname.trim(),grade:Number(values.grade)});
+-        apply(data,'🧭');hydrate(data);setResult(null);setProposal(null);setReflection('');setModel(false);setFail(false);
++        const data=await api('/profiles','POST',creationRequest(values));
++        apply(data,values.avatar);finishCreation();hydrate(data);setResult(null);setProposal(null);setReflection('');setModel(false);setFail(false);
+         setCreatedProfileId(data.profile.id);route('welcome');
+         return data;
+       });
+@@ -156,19 +151,13 @@
+ 
+   return <AppShell page={page} state={state} career={career} careerScreen={careerScreen} progressLoading={careerLoading} avatar={currentAvatar} onNavigate={go} busy={busy}><main id="main" className={`main-content ${page==='welcome'?'is-welcome':''}`} aria-busy={busy || loading}>
+     <div className="demo-banner"><ShieldCheck size={14}/><span>Fictional explorers only · A local educational demo</span><span className="banner-note">Explore possibilities. Keep your options open.</span></div>
+-    {error && page!=='welcome' && <div className="alert error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error"><X size={17}/></button>{!state && <button onClick={load}>Try again</button>}</div>}
++    {error && (page!=='welcome'||!entryError) && <div className="alert error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error"><X size={17}/></button>{!state && <button onClick={load}>Try again</button>}</div>}
+     {notice && <div className="alert notice" role="status"><Check size={17}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={17}/></button></div>}
+     {loading && page!=='welcome' ? <div className="loading"><Compass className="spin" size={32}/><p>Finding your place on the map…</p></div> : <>
+ 
+-    {page === 'profiles' && <><PageHeading eyebrow="YOUR STARTING POINT" title="Meet your explorer.">Give your fictional explorer a little personality. Your choices and progress stay together as your journey grows.</PageHeading><div className="profile-layout"><section className="panel creation-panel"><div className="panel-title"><span className="icon-block lilac"><Plus size={22}/></span><div><h2>Create an explorer</h2><p>A fresh map, ready for your curiosity.</p></div></div>
+-      <form onSubmit={create}><fieldset disabled={busy}><legend>Choose an avatar</legend><div className="avatar-picker">{AVATARS.map(icon => <button type="button" key={icon} className={avatar === icon ? 'selected' : ''} onClick={() => setAvatar(icon)} aria-label={`Choose ${icon} avatar`} aria-pressed={avatar === icon}>{icon}</button>)}</div>
+-      <label htmlFor="explorer-name">Explorer nickname <span>Use a made-up name</span></label><input id="explorer-name" value={alias} onChange={event => setAlias(event.target.value)} placeholder="e.g. Nova Explorer" minLength={2} maxLength={40} required autoComplete="off"/>
+-      <div className="grade-legend" id="grade-label">What grade are you exploring?</div><div className="grade-picker" role="group" aria-labelledby="grade-label">{[9, 10, 11, 12].map(value => <button type="button" key={value} aria-pressed={grade === value} className={grade === value ? 'selected' : ''} onClick={() => setGrade(value)}><small>GRADE</small>{value}</button>)}</div>
+-      <label className="checkbox-label fictional-check"><input type="checkbox" checked={fictional} onChange={event => setFictional(event.target.checked)} required/>This is a fictional explorer. I won’t enter real student information.</label>
+-      <Button type="submit" busy={busy} disabled={!fictional || alias.trim().length < 2} className="full">Create profile & start my journey <ArrowRight size={17}/></Button></fieldset></form></section>
+-      <aside><section className="panel saved-profiles"><span className="eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2>Your explorers</h2><p>Profiles remembered in this browser. Each keeps its own discovery history.</p>{explorers.length ? explorers.map(explorer => <button className={`saved-explorer ${explorer.id === pid ? 'selected' : ''}`} key={explorer.id} disabled={busy} onClick={() => selectExplorer(explorer.id)}><span className="mini-avatar">{explorer.avatar || '🧭'}</span><span><strong>{explorer.alias}</strong><small>Grade {explorer.grade}{explorer.id === pid ? ' · Current explorer' : ''}</small></span><ArrowUpRight size={18}/></button>) : <div className="small-empty"><UserRound size={30}/><p>Your first explorer will appear here.</p></div>}</section><div className="profile-reassurance"><ShieldCheck size={20}/><p>No email, real name, or birthday needed. These are local demo profiles, not authenticated student accounts.</p></div></aside></div></>}
++    {page==='profiles'&&<ExplorerSelection explorers={explorers} pid={pid} view={explorerView} onView={setExplorerView} onSelect={selectExplorer} onCreate={createFromWelcome} busy={busy}/>}
+ 
+-    {page==='welcome'&&<Welcome state={state} experience={experience} createdProfileId={createdProfileId} loading={loading} error={error} onRetry={load} onNavigate={leaveHome} onCreate={createFromWelcome} busy={busy} questTotal={quests.length || 3}/>}
++    {page==='welcome'&&<Welcome explorers={explorers} onExplorerChoice={view=>{route('profiles');setExplorerView(view);}} state={state} experience={experience} createdProfileId={createdProfileId} loading={loading} error={entryError?error:''} onRetry={load} onNavigate={leaveHome} onCreate={createFromWelcome} busy={busy} questTotal={quests.length || 3}/>}
+     {page==='quests'&&<DiscoveryQuests key={pid} state={state} quests={quests} onNavigate={go} onAnswer={answer} busy={busy} onDirty={setQuestDirty}/>}
+     {page==='confirm'&&<ExplorerProfile state={state} quests={quests} values={profileValues} onChange={setProfileValues} onConfirm={confirm} onSaveRevision={saveProfileRevision} onGuideUpdated={refreshGuide} onBeginEdit={beginEdit} onNavigate={go} busy={busy} dirty={profileDirty} onPending={setInterestPending}/>}
+     {page==='journey'&&<><PageHeading eyebrow="MY JOURNEY" title="Your story keeps growing.">Revisit saved moments and reflections. Your earlier choices stay part of the story.</PageHeading>{!state?<Gate state={state} onNavigate={go}/>:<section className="panel"><div className="button-row"><Button onClick={()=>navigate('reflect')}>Reflect on my experience<BookOpen size={17}/></Button><Button className="secondary" onClick={openProfile}>Revisit my profile<ArrowUpRight size={17}/></Button></div><div className="story-panel"><ActivityTimeline events={state.events}/></div></section>}</>}
+--- a/frontend/src/components/AppShell.jsx
++++ b/frontend/src/components/AppShell.jsx
+@@ -15,5 +15,5 @@
+   window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);
+  },[]);
+  const accent=page==='confirm'?'confirm':page==='quests'?'discover':['worlds','portfolio'].includes(page)?careerScreen==='worlds'?'explore':'celebrate':'home';
+- return <div ref={shell} className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header ref={header} className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></div><Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/>{experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
++ return <div ref={shell} className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header ref={header} className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button>{state&&<><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></>}</div>{state&&<Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/>} {experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
+ }
+--- /dev/null
++++ b/frontend/src/components/ExplorerSelection.jsx
+@@ -0,0 +1,10 @@
++import React from 'react';
++import {ArrowUpRight,ShieldCheck} from 'lucide-react';
++import ExplorerSetup from './ExplorerSetup';
++import {Button,PageHeading} from './Shared';
++export default function ExplorerSelection({explorers,pid,onSelect,onCreate,onView,view='switch',busy=false}) {
++ return <div className="explorer-selection"><PageHeading eyebrow="LOCAL FICTIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are fictional demo profiles remembered in this browser, not authenticated student accounts. Each keeps its own saved progress.</PageHeading><div className={`explorer-selection-layout selection-${view}`}>
++ {view!=='saved'&&<ExplorerSetup key="new-explorer" onCreate={onCreate} busy={busy}/>}
++ {view!=='create'&&<section className="panel saved-profiles" aria-labelledby="saved-explorers-title"><h2 id="saved-explorers-title">Your saved explorers</h2><p>Choose whose adventure to continue.</p>{explorers.length?explorers.map(explorer=><button className={`saved-explorer ${explorer.id===pid?'selected':''}`} key={explorer.id} disabled={busy} onClick={()=>onSelect(explorer.id)}><span className="mini-avatar" aria-hidden="true">{explorer.avatar||'🧭'}</span><span><strong>{explorer.alias?.trim()||'Explorer'}</strong><small>Grade {explorer.grade}{explorer.id===pid?' · Current explorer':''}</small></span><ArrowUpRight size={18} aria-hidden="true"/></button>):<p>No saved explorers are available to this browser yet.</p>}<p className="setup-local-note"><ShieldCheck size={20} aria-hidden="true"/>No email, real name, or birthday needed.</p>{view==='saved'&&<Button className="secondary" onClick={()=>onView('create')}>Create a New Explorer</Button>}</section>}
++ </div>{view==='create'&&explorers.length>0&&<Button className="ghost" onClick={()=>onView('saved')}>Back to saved explorers</Button>}</div>;
++}
+--- /dev/null
++++ b/frontend/src/components/ExplorerSetup.jsx
+@@ -0,0 +1,19 @@
++import React,{useId,useState} from 'react';
++import {ArrowRight} from 'lucide-react';
++import {Button} from './Shared';
++import {setupProblems} from '../explorerSetup';
++import './explorer-setup.css';
++const AVATARS=[['🧭','Compass'],['🚀','Rocket'],['🌱','Seedling'],['🎨','Palette'],['🔬','Microscope'],['🪐','Planet']];
++export default function ExplorerSetup({onCreate,busy=false}) {
++ const id=useId(),[nickname,setNickname]=useState(''),[grade,setGrade]=useState(''),[avatar,setAvatar]=useState('🧭'),[fictional,setFictional]=useState(false),[touched,setTouched]=useState(false);
++ const values={nickname,grade,avatar,fictional},issues=setupProblems(values);
++ const submit=event=>{event.preventDefault();setTouched(true);if(!issues.length&&!busy)onCreate(values);};
++ return <section className="explorer-setup-card" aria-labelledby={`${id}-title`}><span className="welcome-eyebrow">YOUR STARTING POINT</span><h2 id={`${id}-title`}>Create your fictional explorer</h2><p>A nickname, an avatar, and a little curiosity.</p><form className="explorer-setup-form" onSubmit={submit}><fieldset disabled={busy}><legend className="sr-only">Explorer setup</legend>
++ <fieldset className="setup-avatars"><legend>Choose an avatar</legend><div>{AVATARS.map(([icon,label])=><label key={icon} className={avatar===icon?'setup-avatar selected':'setup-avatar'}><input type="radio" name={`${id}-avatar`} value={icon} checked={avatar===icon} onChange={()=>setAvatar(icon)}/><span aria-hidden="true">{icon}</span><span>{label}</span></label>)}</div></fieldset>
++ <label htmlFor={`${id}-name`}>Fictional nickname</label><input id={`${id}-name`} value={nickname} onChange={e=>setNickname(e.target.value)} onBlur={()=>setTouched(true)} placeholder="e.g. Nova Explorer" minLength={2} maxLength={40} required autoComplete="off" aria-invalid={touched&&nickname.trim().length<2?true:undefined} aria-describedby={`${id}-name-help`}/><span className="setup-field-help" id={`${id}-name-help`}>{touched&&nickname.trim().length<2?'Enter at least two characters. ':''}Use a made-up name, never a real student’s name.</span>
++ <label htmlFor={`${id}-grade`}>Grade</label><select id={`${id}-grade`} value={grade} onChange={e=>setGrade(e.target.value)} required><option value="" disabled>Choose your grade</option>{[9,10,11,12].map(value=><option key={value} value={value}>Grade {value}</option>)}</select>
++ <label className="setup-ack"><input type="checkbox" checked={fictional} onChange={e=>setFictional(e.target.checked)} required/><span>This is a fictional explorer. I won’t enter real student information.</span></label>
++ <div id={`${id}-guidance`} className="setup-guidance" aria-live="polite">{issues.length?<><strong>Before you start:</strong><ul>{issues.map(issue=><li key={issue}>{issue}</li>)}</ul></>:<span>Ready for your first adventure. Creating an explorer earns no XP.</span>}</div>
++ <Button type="submit" busy={busy} disabled={issues.length>0} aria-describedby={`${id}-guidance`} className="full">Create My Explorer<ArrowRight size={20} aria-hidden="true"/></Button>
++ </fieldset></form></section>;
++}
+--- /dev/null
++++ b/frontend/src/components/explorer-setup.css
+@@ -0,0 +1,34 @@
++.explorer-setup-card{background:#fff;border:1px solid #d8cceb;border-radius:26px;padding:30px;box-shadow:0 14px 36px #53339a0c;min-width:0;color:#291c43}
++.explorer-setup-card h2{font-size:26px;line-height:1.3;margin:10px 0 12px;overflow-wrap:anywhere}
++.explorer-setup-card p{font-size:18px;line-height:1.6;margin:0 0 20px;color:#655773}
++.explorer-setup-form fieldset{border:0;margin:0;padding:0;min-width:0}
++.explorer-setup-form label,.explorer-setup-form legend{font-size:18px;line-height:1.5;color:#38244f;font-weight:650}
++.explorer-setup-form label:not(.setup-avatar){display:block;margin:20px 0 8px}
++.explorer-setup-form input:not([type=radio]):not([type=checkbox]),.explorer-setup-form select{width:100%;min-height:54px;font-size:18px;line-height:1.5;border:1px solid #9984b2;border-radius:12px;background:#fff;color:#291c43;padding:12px}
++.explorer-setup-form .setup-avatars>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:10px 0 18px}
++.explorer-setup-form .setup-avatar{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:88px;padding:12px 6px;border:2px solid #e2daed;border-radius:16px;background:#faf8fe;cursor:pointer;font-size:15px;font-weight:600;text-align:center}
++.setup-avatar>span:first-of-type{font-size:32px;line-height:1.1}
++.setup-avatar input{position:absolute;opacity:0;width:1px;height:1px}
++.explorer-setup-form .setup-avatar.selected{border-color:#6635bd;background:#ede4ff;box-shadow:inset 0 0 0 1px #6635bd;color:#4f238f}
++.setup-avatar:focus-within{outline:3px solid #087c83;outline-offset:3px}
++.setup-field-help{display:block;color:#655773;font-size:15px;line-height:1.6;margin-top:8px}
++.explorer-setup-form label.setup-ack{display:flex;gap:12px;align-items:flex-start;font-weight:400;font-size:17px;line-height:1.6}
++.setup-ack input{width:21px;height:21px;margin:3px 0 0;flex-shrink:0;accent-color:#6533bd}
++.setup-guidance{margin:20px 0;color:#5f506e;font-size:15px;line-height:1.6}
++.setup-guidance ul{padding-left:21px;margin:6px 0 0}
++.global-ui .explorer-setup-form .button{width:100%;min-height:56px;font-size:18px;white-space:normal;background:#6130b5;color:#fff;border:1px solid #6130b5}
++.global-ui .explorer-setup-form .button:disabled{background:#eee9f4;color:#6b5c78;border-color:#d4c9e0;opacity:1}
++.explorer-selection-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
++.explorer-selection-layout.selection-create,.explorer-selection-layout.selection-saved{grid-template-columns:minmax(0,640px)}
++.setup-local-note{display:flex;gap:12px;align-items:start;font-size:17px!important;margin:24px 0!important}
++.explorer-selection .saved-explorer strong{overflow-wrap:anywhere;white-space:normal}
++.explorer-selection .saved-explorer{width:100%;min-width:0}
++@media(max-width:700px){.explorer-selection-layout{grid-template-columns:1fr}.explorer-setup-card{padding:24px 20px}.explorer-setup-card h2{font-size:24px}.explorer-setup-card p{font-size:17px}.explorer-setup-form label{font-size:17px}}
++@media(prefers-reduced-motion:reduce){.explorer-setup-card *{transition:none!important;animation:none!important}}
++/* Override legacy form label rules within this shared setup only. */
++.global-ui .explorer-setup-form label:not(.setup-avatar),.global-ui .explorer-setup-form legend{font-size:18px;line-height:1.5}
++.global-ui .explorer-setup-form .setup-ack>span{font-size:17px;color:inherit;line-height:1.6}
++.global-ui .explorer-setup-form .setup-avatar>span:last-child{font-size:15px;color:inherit}
++@media(max-width:700px){.global-ui .explorer-setup-form label:not(.setup-avatar){font-size:17px}}
++
++.global-ui .explorer-setup-form .setup-avatar{margin:0}
+--- /dev/null
++++ b/frontend/src/explorerSetup.js
+@@ -0,0 +1,26 @@
++// Creation receipts survive a lost response and a browser reload. They do not
++// select an explorer; only a validated backend profile response can do that.
++export function setupProblems({nickname='',grade='',fictional=false}) {
++  const issues=[];
++  if(nickname.trim().length<2||nickname.trim().length>40)issues.push('Enter a fictional nickname (2–40 characters).');
++  if(![9,10,11,12].includes(Number(grade)))issues.push('Choose Grade 9, 10, 11 or 12.');
++  if(!fictional)issues.push('Confirm that you will use fictional information only.');
++  return issues;
++}
++export function creationRequest(values, storage=sessionStorage, newKey=()=>crypto.randomUUID()) {
++  const issues=setupProblems(values);if(issues.length)throw Error(issues.join(' '));
++  const body={alias:values.nickname.trim(),grade:Number(values.grade),fictional_ack:true};
++  let previous;try{previous=JSON.parse(storage.getItem('cq_pending_creation')||'null');}catch{}
++  const creation_key=previous?.payload===JSON.stringify(body)&&typeof previous.key==='string'?previous.key:newKey();
++  storage.setItem('cq_pending_creation',JSON.stringify({payload:JSON.stringify(body),key:creation_key}));
++  return {...body,creation_key};
++}
++export function finishCreation(storage=sessionStorage){storage.removeItem('cq_pending_creation');}
++export async function availableExplorers(remembered, getProfile) {
++  // Only validate IDs already associated with this browser. Never query a global list.
++  const saved=await Promise.all(remembered.map(async item=>{
++    try{const result=await getProfile(item.id);return {...item,alias:result.profile.alias,grade:result.profile.grade};}
++    catch(error){if(error.status===404)return null;throw error;}
++  }));
++  return saved.filter(Boolean);
++}
+--- a/frontend/src/pages/Welcome.jsx
++++ b/frontend/src/pages/Welcome.jsx
+@@ -1,30 +1,28 @@
+-import React, {useState} from 'react';
++import React from 'react';
+ import {ArrowRight, Compass, Sparkles, Globe2, RefreshCw} from 'lucide-react';
+ import {studentExperience} from '../studentExperience';
+ import {welcomeHero} from '../welcomeHero';
+ import {welcomeMode} from '../welcomeMode';
+ import {Button} from '../components/Shared';
+ import StudentTrail from '../components/StudentTrail';
++import ExplorerSetup from '../components/ExplorerSetup';
+ import './welcome.css';
+ 
+-export default function Welcome({state, createdProfileId='', loading=false, error='', onRetry, onNavigate, onCreate, busy=false, questTotal=3, experience=null}) {
+-  const [nickname,setNickname] = useState('');
+-  const [grade,setGrade] = useState('');
++export default function Welcome({state, createdProfileId='', loading=false, error='', onRetry, onNavigate, onCreate, busy=false, questTotal=3, experience=null, explorers=[], onExplorerChoice}) {
+   if (loading) return <section className="welcome-page welcome-state" role="status"><Compass size={42} aria-hidden="true"/><h1>Welcome to CareerQuest AI.</h1><p>Getting your adventure ready…</p></section>;
+   if (error) return <section className="welcome-page welcome-state"><div role="alert"><h1>Let’s get you started.</h1><p>{error}</p></div><Button onClick={onRetry}><RefreshCw size={19} aria-hidden="true"/>Try again</Button></section>;
+-  const mode = welcomeMode(state,createdProfileId);
++  const mode = welcomeMode(state,createdProfileId,explorers);
+   const progress = experience || studentExperience(state,null,questTotal);
+   const journey = progress.journey;
+   const hero = welcomeHero(state,questTotal,progress);
+   const savedNickname = state?.profile?.alias?.trim() || 'explorer';
+-  const start = event=>{event.preventDefault();onCreate({nickname,grade});};
+-  const title = mode==='setup'?'Your future is an adventure':mode==='aboard'?`Welcome aboard, ${savedNickname}!`:hero.title;
+-  const message = mode==='setup'?'Discover what interests you, explore new possibilities, and take a small next step. Start by creating your fictional explorer.':mode==='aboard'?'Your explorer is saved. Your first discovery is waiting, and there are no right or wrong answers.':hero.message;
++  if(mode==='setup'||mode==='choose')return <div className={`welcome-page onboarding-welcome onboarding-${mode}`}><div className="onboarding-grid"><section className="onboarding-introduction" aria-labelledby="welcome-title"><span className="welcome-eyebrow">WELCOME TO CAREERQUEST AI</span><h1 id="welcome-title">Your next chapter starts with curiosity.</h1><p>Play three discovery quests, explore career possibilities, and create a personal map of what interests you. You don’t need to have your future figured out.</p><div className="onboarding-art" aria-hidden="true"><span className="onboarding-orbit"/><Compass size={94} strokeWidth={1.3}/><span className="onboarding-spark">✦</span></div><ol className="onboarding-preview" aria-label="What your adventure includes"><li>Discover your interests</li><li>Explore careers</li><li>Create your portfolio</li></ol><p className="onboarding-local">For Grades 9–12 · Local fictional demo profiles</p></section>{mode==='setup'?<ExplorerSetup onCreate={onCreate} busy={busy}/>:<section className="explorer-setup-card returning-choice"><span className="welcome-eyebrow">PICK UP WHERE YOU LEFT OFF</span><h2>Your adventure is waiting.</h2><p>This browser remembers saved fictional explorers. Choose whose journey to continue, or start a new one.</p><Button onClick={()=>onExplorerChoice('saved')} busy={busy}>Continue My Adventure<ArrowRight size={20} aria-hidden="true"/></Button><Button className="secondary" onClick={()=>onExplorerChoice('create')} busy={busy}>Create a New Explorer</Button><p className="setup-local-note">These are local demo profiles, not authenticated student accounts.</p></section>}</div></div>;
++  const title = mode==='aboard'?`Welcome aboard, ${savedNickname}!`:hero.title;
++  const message = mode==='aboard'?'Your first quest is ready. There are no right or wrong answers.':hero.message;
+   return <div className={`welcome-page welcome-mode-${mode}`}>
+     <section className="welcome-intro" aria-labelledby="welcome-title">
+-      <div className="welcome-copy"><span className="welcome-eyebrow">{mode==='setup'?'WELCOME TO CAREERQUEST AI':mode==='aboard'?'YOUR ADVENTURE STARTS HERE':'YOUR ADVENTURE HOME'}</span><h1 id="welcome-title">{title}</h1><p className="welcome-instruction">{message}</p>
+-        {mode!=='setup'&&(hero.grade!==null||hero.points!==null)&&<ul className="welcome-saved-facts" aria-label="Your saved explorer details">{hero.grade!==null&&<li>Grade {hero.grade}</li>}{hero.points!==null&&<li><Sparkles size={19} aria-hidden="true"/>{hero.points} Explorer Points earned</li>}</ul>}
+-        {mode==='setup'&&<form id="welcome-explorer-setup" className="welcome-setup" onSubmit={start}><fieldset disabled={busy}><legend>Meet your fictional explorer.</legend><div className="welcome-setup-fields"><div><label htmlFor="welcome-nickname">Fictional nickname</label><input id="welcome-nickname" value={nickname} onChange={event=>setNickname(event.target.value)} placeholder="e.g. Nova Explorer" minLength={2} maxLength={40} required autoComplete="off" aria-describedby="welcome-nickname-help"/><span id="welcome-nickname-help" className="welcome-field-help">Use a made-up nickname, never a real student’s name.</span></div><div><label htmlFor="welcome-grade">Grade</label><select id="welcome-grade" value={grade} onChange={event=>setGrade(event.target.value)} required><option value="" disabled>Choose grade</option>{[9,10,11,12].map(value=><option key={value} value={value}>Grade {value}</option>)}</select></div></div><Button type="submit" busy={busy} disabled={!grade||nickname.trim().length<2}>Create My Explorer<ArrowRight size={20} aria-hidden="true"/></Button></fieldset></form>}
++      <div className="welcome-copy"><span className="welcome-eyebrow">{mode==='aboard'?'YOUR ADVENTURE STARTS HERE':'YOUR ADVENTURE HOME'}</span><h1 id="welcome-title">{title}</h1><p className="welcome-instruction">{message}</p>
++        {(hero.grade!==null||hero.points!==null)&&<ul className="welcome-saved-facts" aria-label="Your saved explorer details">{hero.grade!==null&&<li>Grade {hero.grade}</li>}{hero.points!==null&&<li><Sparkles size={19} aria-hidden="true"/>{hero.points} Explorer Points earned</li>}</ul>}
+         <p className="welcome-reassurance">For curious minds in Grades 9–12. You can change direction as you grow.</p></div>
+       <div className="welcome-illustration" aria-hidden="true"><div className="welcome-orbit orbit-outer"/><div className="welcome-orbit orbit-inner"/><span className="welcome-compass"><Compass size={110} strokeWidth={1.2}/></span><span className="welcome-sticker sticker-discover"><Sparkles size={25}/>A spark of curiosity</span><span className="welcome-sticker sticker-explore"><Globe2 size={25}/>A world to explore</span><span className="welcome-art-star">✦</span><span className="welcome-art-dot"/></div>
+     </section>
+--- a/frontend/src/pages/welcome.css
++++ b/frontend/src/pages/welcome.css
+@@ -86,3 +86,21 @@
+ .welcome-page .welcome-first-mission p{font-size:18px;margin-bottom:18px;max-width:760px}
+ .welcome-page .welcome-first-mission .first-mission-note{font-size:17px}
+ @media(max-width:650px){.welcome-first-mission{grid-template-columns:1fr;gap:18px;padding:24px}.first-mission-icon{width:64px;height:64px;border-radius:19px}.welcome-first-mission h2{font-size:25px}.welcome-page .welcome-first-mission p{font-size:17px}}
++/* Unselected explorers get a calm welcome; the Adventure Home remains intact. */
++.onboarding-welcome{border-radius:30px;background:linear-gradient(135deg,#f0e5ff 0%,#edf5ff 65%,#e4f6fb 100%);border:1px solid #e0d4f4;margin:24px 0;padding:42px}
++.onboarding-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:42px;align-items:center}
++.global-ui .onboarding-introduction h1{font-size:42px;line-height:1.18;letter-spacing:-1px;max-width:480px;margin:18px 0 22px}
++.onboarding-introduction>p{color:#584768;font-size:18px;max-width:490px}
++.onboarding-art{height:190px;position:relative;display:grid;place-items:center;max-width:370px;margin:22px 0;color:#6536b8}
++.onboarding-art>svg{width:112px;height:112px;padding:16px;border-radius:28px;background:#6536b8;color:white;transform:rotate(-12deg);box-shadow:0 14px 26px #55339524}
++.onboarding-orbit{position:absolute;width:240px;height:150px;border:2px dashed #aa92d0;border-radius:50%;transform:rotate(-18deg)}
++.onboarding-spark{position:absolute;right:30px;top:10px;font-size:40px;color:#8b6615}
++.onboarding-preview{display:flex;flex-wrap:wrap;gap:10px 12px;list-style:none;margin:0 0 20px;padding:0;font-size:16px;line-height:1.6;color:#513475;font-weight:650}
++.onboarding-preview li:not(:last-child)::after{content:'→';margin-left:12px;color:#7959a6}
++.welcome-page .onboarding-local{font-size:15px;margin:0;color:#655773}
++.returning-choice .button{width:100%;margin:12px 0 0;justify-content:center;white-space:normal}
++.global-ui .returning-choice .button:not(.secondary){background:#6130b5;color:white}
++.global-header-top:has(>.global-brand:only-child){grid-template-columns:1fr;min-height:78px}
++@media(max-width:950px){.onboarding-welcome{padding:30px 26px}.onboarding-grid{gap:26px}.global-ui .onboarding-introduction h1{font-size:36px}}
++@media(max-width:700px){.onboarding-welcome{padding:26px 18px;margin:14px 0}.onboarding-grid{grid-template-columns:1fr;gap:26px}.global-ui .onboarding-introduction h1{font-size:30px;letter-spacing:-.5px}.onboarding-introduction>p{font-size:17px}.onboarding-art{height:140px;margin:18px auto}.onboarding-art>svg{width:92px;height:92px}.onboarding-orbit{height:110px;width:220px}.onboarding-preview{font-size:16px}.global-header-top:has(>.global-brand:only-child){min-height:68px;display:flex}}
++@media(prefers-reduced-motion:reduce){.onboarding-art *{transform:none!important;animation:none!important;transition:none!important}}
+--- a/frontend/src/welcomeMode.js
++++ b/frontend/src/welcomeMode.js
+@@ -1,7 +1,7 @@
+ // Existence/progress comes from the backend. A creation receipt is only a
+ // transient acknowledgement of a successful POST, never a persisted user flag.
+-export function welcomeMode(state, createdProfileId = '') {
+-  if (!state) return 'setup';
++export function welcomeMode(state, createdProfileId = '', explorers = []) {
++  if (!state) return explorers.length ? 'choose' : 'setup';
+   if (createdProfileId && createdProfileId === state.profile?.id && state.quest_count === 0 && !state.quest_complete) return 'aboard';
+   return 'returning';
+ }
+--- /dev/null
++++ b/frontend/tests/explorer-setup.test.js
+@@ -0,0 +1,36 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import {availableExplorers,creationRequest,finishCreation,setupProblems} from '../src/explorerSetup.js';
++import {welcomeMode} from '../src/welcomeMode.js';
++const valid={nickname:' Fictional Orbit ',grade:'10',fictional:true,avatar:'🚀'};
++const storage=()=>{const items=new Map();return {getItem:key=>items.get(key)||null,setItem:(key,value)=>items.set(key,value),removeItem:key=>items.delete(key)};};
++test('all four entry states are distinct without automatic explorer selection',()=>{
++ assert.equal(welcomeMode(null),'setup');assert.equal(welcomeMode(null,'',[{id:'saved'}]),'choose');
++ assert.equal(welcomeMode({profile:{id:'active'},quest_count:1},'',[{id:'other'}]),'returning');
++ // Explicit switching remains a separate existing page, independent of Home mode.
++ assert.equal(welcomeMode({profile:{id:'active'},quest_count:0},'active'),'aboard');
++});
++test('nickname grade and fictional acknowledgement are required',()=>{
++ assert.equal(setupProblems({}).length,3);assert.equal(setupProblems(valid).length,0);
++ for(const change of [{nickname:'  '},{grade:''},{grade:'8'},{fictional:false}])assert.ok(setupProblems({...valid,...change}).length);
++});
++test('lost response retry and reload retain the same request identity',()=>{
++ const saved=storage();let count=0;const key=()=>`key-${++count}`;
++ const first=creationRequest(valid,saved,key);const reloaded=creationRequest(JSON.parse(JSON.stringify(valid)),saved,key);
++ assert.deepEqual(first,reloaded);assert.equal(count,1);assert.equal(first.alias,'Fictional Orbit');assert.equal(first.fictional_ack,true);
++ assert.ok(!('avatar' in first));assert.ok(!('xp' in first));assert.ok(!('confirmed' in first));
++ finishCreation(saved);assert.notEqual(creationRequest(valid,saved,key).creation_key,first.creation_key);
++});
++test('invalid form never stores a receipt, changed setup gets a new identity',()=>{
++ const saved=storage();let count=0;const key=()=>`key-${++count}`;
++ assert.throws(()=>creationRequest({...valid,grade:''},saved,key));assert.equal(count,0);
++ const first=creationRequest(valid,saved,key);assert.notEqual(creationRequest({...valid,nickname:'Another Fictional'},saved,key).creation_key,first.creation_key);
++});
++test('only remembered IDs are checked and backend saved identity refreshes local metadata',async()=>{
++ const calls=[],remembered=[{id:'a',alias:'old',avatar:'🌱'},{id:'missing'}];
++ const result=await availableExplorers(remembered,async id=>{calls.push(id);if(id==='missing')throw {status:404};return {profile:{id,alias:'Fictional Saved',grade:12}};});
++ assert.deepEqual(calls,['a','missing']);assert.deepEqual(result,[{id:'a',alias:'Fictional Saved',grade:12,avatar:'🌱'}]);assert.equal(remembered[0].alias,'old');
++});
++test('unavailable backend cannot be mistaken for a fresh session',async()=>{
++ await assert.rejects(()=>availableExplorers([{id:'known'}],async()=>{throw new Error('Unavailable');}),/Unavailable/);
++});
+--- a/frontend/tests/global-ui.test.js
++++ b/frontend/tests/global-ui.test.js
+@@ -28,7 +28,7 @@
+  const html=shell(confirmed,{page:'worlds',career});for(const text of ['Student profile: Ari Fictional, Grade 11','Explorer Profile','Switch Explorer','Earlier saved activities','My Roadmap','My Journey'])assert.ok(html.includes(text),text);assert.match(html,/<details class="identity-menu"/);
+ });
+ test('zero XP is real and missing identity/points have neutral noninvented fallbacks',()=>{
+- assert.match(shell(),/<strong>0<\/strong> Explorer Points/);const unknown=shell(null);assert.match(unknown,/<strong>—<\/strong> Explorer Points/);assert.doesNotMatch(unknown,/Grade 11/);assert.match(shell({...fresh,profile:{...fresh.profile,alias:''}}),/Student profile: Explorer/);
++ assert.match(shell(),/<strong>0<\/strong> Explorer Points/);const unknown=shell(null);assert.doesNotMatch(unknown,/Explorer Points|Main navigation|Student profile/);assert.doesNotMatch(unknown,/Grade 11/);assert.match(shell({...fresh,profile:{...fresh.profile,alias:''}}),/Student profile: Explorer/);
+ });
+ test('XP explanation is accessible through native details and a described summary',()=>{
+  const html=shell();assert.match(html,/<details class="xp-badge"><summary aria-describedby="[^"]+"/);assert.match(html,/Explorer Points \(XP\) mark saved activity/);assert.match(html,/do not measure ability, grades or career fit/);
+--- a/frontend/tests/welcome-render.test.js
++++ b/frontend/tests/welcome-render.test.js
+@@ -15,7 +15,7 @@
+ let components;
+ try {
+   const output=join(directory,'components.cjs');
+-  await build({stdin:{contents:"export {default as Welcome} from './src/pages/Welcome.jsx'; export {default as AppShell} from './src/components/AppShell.jsx';",resolveDir:root},outfile:output,bundle:true,platform:'node',format:'cjs',external:['react'],loader:{'.css':'empty'},logLevel:'silent'});
++  await build({stdin:{contents:"export {default as ExplorerSelection} from './src/components/ExplorerSelection.jsx'; export {default as Welcome} from './src/pages/Welcome.jsx'; export {default as AppShell} from './src/components/AppShell.jsx';",resolveDir:root},outfile:output,bundle:true,platform:'node',format:'cjs',external:['react'],loader:{'.css':'empty'},logLevel:'silent'});
+   components=(await import(pathToFileURL(output).href)).default;
+ } finally {await rm(directory,{recursive:true,force:true});}
+ const noop=()=>{};
+@@ -47,11 +47,14 @@
+ });
+ 
+ const justCreated={profile:{id:'fictional-created',alias:'Orbit Demo',grade:10,xp:0},quest_count:0,quest_complete:false,confirmed:false};
+-test('first-time setup asks only nickname and grade and creates an explorer before offering a quest',()=>{
++test('first-time setup includes avatars explicit grade and fictional acknowledgment before creation',()=>{
+   const html=renderToStaticMarkup(React.createElement(components.Welcome,{state:null,onCreate:noop,onNavigate:noop}));
+   assert.match(html,/WELCOME TO CAREERQUEST AI/);
+-  assert.match(html,/Your future is an adventure/);
+-  assert.equal((html.match(/<input\b/g)||[]).length,1);
++  assert.match(html,/Your next chapter starts with curiosity/);
++  assert.equal((html.match(/type="radio"/g)||[]).length,6);
++  assert.match(html,/type="checkbox" required/);
++  assert.match(html,/Choose your grade/);
++  assert.match(html,/Before you start/);
+   assert.equal((html.match(/<select\b/g)||[]).length,1);
+   assert.match(html,/Create My Explorer/);
+   assert.doesNotMatch(html,/Start My First Quest|class="student-trail"|Explorer Points earned/);
+@@ -85,3 +88,22 @@
+   assert.match(error,/Try again/);
+   assert.doesNotMatch(loading+error,/Create My Explorer|<form\b/);
+ });
++
++test('saved explorers without an active selection show a choice, not the setup or saved names',()=>{
++ const html=renderToStaticMarkup(React.createElement(components.Welcome,{state:null,explorers:[{id:'saved',alias:'Hidden saved name'}],onExplorerChoice:noop}));
++ assert.match(html,/Continue My Adventure/);assert.match(html,/Create a New Explorer/);assert.doesNotMatch(html,/<form|Hidden saved name|class="student-trail"/);
++});
++test('unselected header omits student identity points and personalized navigation',()=>{
++ const html=renderToStaticMarkup(React.createElement(components.AppShell,{page:'welcome',state:null,onNavigate:noop}));
++ assert.match(html,/CareerQuest AI Home/);assert.doesNotMatch(html,/Explorer Points|Student profile|Main navigation|Grade/);
++});
++
++for(const view of ['switch','create','saved'])test(`explorer selection ${view} keeps saved profiles separate and never prefills a new explorer`,()=>{
++ const html=renderToStaticMarkup(React.createElement(components.ExplorerSelection,{view,explorers:[{id:'local',alias:'Fictional Saved',grade:12}],pid:'local',onCreate:noop,onSelect:noop,onView:noop}));
++ if(view==='saved'){assert.doesNotMatch(html,/<form/);assert.match(html,/Fictional Saved/);}
++ else{
++ const form=html.slice(html.indexOf('<form'),html.indexOf('</form>'));
++ assert.match(form,/value=""/);assert.match(form,/<option value="" disabled="" selected=""/);assert.doesNotMatch(form,/Fictional Saved|value="12" selected/);assert.match(form,/type="checkbox" required=""/);
++ if(view==='create')assert.doesNotMatch(html,/Fictional Saved/);
++ }
++});
+--- a/scripts/smoke_discovery_agent.py
++++ b/scripts/smoke_discovery_agent.py
+@@ -22,7 +22,7 @@
+         evidence.update(status='skipped', reason='Groq key is not configured')
+     else:
+         with tempfile.TemporaryDirectory(prefix='careerquest-agent-live-') as directory, patch.object(api, 'DB', str(Path(directory)/'fictional.sqlite3')), TestClient(api.app) as client:
+-            pid = client.post('/api/profiles', json={'alias': 'Comet Fictional Agent', 'grade': 11}).json()['profile']['id']
++            pid = client.post('/api/profiles', json={'fictional_ack': True, 'alias': 'Comet Fictional Agent', 'grade': 11}).json()['profile']['id']
+             base = f'/api/profiles/{pid}'
+             for step, quest in enumerate(api.QUESTS): assert client.post(base+f'/quests/{step}', json={'option': next(iter(quest['options']))}).status_code == 200
+             before = client.get(base).json()
+--- a/scripts/smoke_discovery_guide.py
++++ b/scripts/smoke_discovery_guide.py
+@@ -28,7 +28,7 @@
+         result.update(status='skipped', reason='GROQ_API_KEY is not configured')
+     else:
+         with tempfile.TemporaryDirectory(prefix='careerquest-guide-live-') as directory, patch.object(api, 'DB', str(Path(directory) / 'fictional.sqlite3')), TestClient(api.app) as client:
+-            initial = client.post('/api/profiles', json={'alias': 'Comet Fictional Smoke', 'grade': 10}).json()
++            initial = client.post('/api/profiles', json={'fictional_ack': True, 'alias': 'Comet Fictional Smoke', 'grade': 10}).json()
+             base = '/api/profiles/' + initial['profile']['id']
+             for step, quest in enumerate(api.QUESTS):
+                 assert client.post(base + f'/quests/{step}', json={'option': next(iter(quest['options']))}).status_code == 200
+--- a/scripts/smoke_discovery_handoff.py
++++ b/scripts/smoke_discovery_handoff.py
+@@ -23,7 +23,7 @@
+         result.update(status='skipped', reason='Groq key is not configured')
+     else:
+         with tempfile.TemporaryDirectory(prefix='careerquest-handoff-live-') as directory, patch.object(api, 'DB', str(Path(directory)/'fictional.sqlite3')), TestClient(api.app) as client:
+-            student = client.post('/api/profiles', json={'alias': 'Fictional Handoff Smoke', 'grade': 10}).json()
++            student = client.post('/api/profiles', json={'fictional_ack': True, 'alias': 'Fictional Handoff Smoke', 'grade': 10}).json()
+             base = '/api/profiles/' + student['profile']['id']
+             for step, quest in enumerate(api.QUESTS):
+                 assert client.post(base+f'/quests/{step}', json={'option': next(iter(quest['options']))}).status_code == 200
+--- a/tests/test_adventure_home.py
++++ b/tests/test_adventure_home.py
+@@ -12,7 +12,7 @@
+     def test_returning_progress_is_persisted_and_client_flags_cannot_unlock_planning(self):
+         with tempfile.TemporaryDirectory() as directory, patch.object(api, 'DB', str(Path(directory)/'home.sqlite3')):
+             with TestClient(api.app) as client:
+-                state=client.post('/api/profiles',json={'alias':'Fictional Orbit','grade':10,'xp':999,'confirmed':True,'quest_complete':True}).json()
++                state=client.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Orbit','grade':10,'xp':999,'confirmed':True,'quest_complete':True}).json()
+                 pid=state['profile']['id']; base=f'/api/profiles/{pid}'
+                 self.assertEqual(state['profile']['xp'],0)
+                 self.assertFalse(state['confirmed'])
+@@ -57,7 +57,7 @@
+     def test_legacy_missing_nickname_is_returned_without_changing_records(self):
+         with tempfile.TemporaryDirectory() as directory, patch.object(api, 'DB', str(Path(directory)/'home.sqlite3')):
+             with TestClient(api.app) as client:
+-                state=client.post('/api/profiles',json={'alias':'Fictional Fixture','grade':9}).json()
++                state=client.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Fixture','grade':9}).json()
+                 pid=state['profile']['id']
+                 with connect(api.DB) as connection:
+                     connection.execute('UPDATE profiles SET alias=? WHERE id=?',('',pid))
+--- a/tests/test_api.py
++++ b/tests/test_api.py
+@@ -7,7 +7,7 @@
+  def setUp(self):
+   local=patch.dict(os.environ,{'CAREERQUEST_ENV':'local','CAREERQUEST_DEV_TOOLS':'1'});local.start();self.addCleanup(local.stop)
+   self.tmp=tempfile.TemporaryDirectory();api.DB=str(Path(self.tmp.name)/'demo.sqlite3');self.c=TestClient(api.app,base_url='http://127.0.0.1',client=('127.0.0.1',50000))
+-  r=self.c.post('/api/profiles',json={'alias':'Demo Learner','grade':11});self.assertEqual(r.status_code,200);self.pid=r.json()['profile']['id']
++  r=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Demo Learner','grade':11});self.assertEqual(r.status_code,200);self.pid=r.json()['profile']['id']
+  def tearDown(self):self.c.close();self.tmp.cleanup()
+  def url(self,path):return f'/api/profiles/{self.pid}'+path
+  def complete(self):
+--- a/tests/test_career_celebrations.py
++++ b/tests/test_career_celebrations.py
+@@ -17,7 +17,7 @@
+         db=patch.object(api,'DB',self.path);db.start();self.addCleanup(db.stop)
+         env=patch.dict(os.environ,{'CAREERQUEST_CAREER_GROQ':'0','CAREERQUEST_DEV_TOOLS':'0'});env.start();self.addCleanup(env.stop)
+         self.c=TestClient(api.app);self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Nova Fictional','grade':11}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Nova Fictional','grade':11}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
+         for i,q in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{i}',json={'option':next(iter(q['options']))})
+         self.c.post(self.base+'/confirm',json={'interests':['technology']})
+         self.original_events=self.state()['events']
+@@ -88,7 +88,7 @@
+         self.research();item=self.claim();url=self.base+'/career-celebrations/'+item['id']+'/acknowledge'
+         self.assertEqual(self.c.post(url).status_code,200);self.assertEqual(self.c.post(url).status_code,200)
+         with connect(self.path) as c:self.assertTrue(c.execute('SELECT acknowledged_at FROM career_milestones WHERE id=?',(item['id'],)).fetchone()[0])
+-        other=self.c.post('/api/profiles',json={'alias':'Other Fictional','grade':10}).json()['profile']['id']
++        other=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Other Fictional','grade':10}).json()['profile']['id']
+         self.assertEqual(self.c.post(f'/api/profiles/{other}/career-celebrations/{item["id"]}/acknowledge').status_code,404)
+     def test_returning_history_is_not_backfilled_or_misidentified_as_new(self):
+         self.save();self.save('design');self.paths('software','design')
+--- a/tests/test_career_discovery_milestone.py
++++ b/tests/test_career_discovery_milestone.py
+@@ -14,7 +14,7 @@
+         db=patch.object(api,'DB',self.path);db.start();self.addCleanup(db.stop)
+         env=patch.dict(os.environ,{'CAREERQUEST_CAREER_GROQ':'0','CAREERQUEST_DEV_TOOLS':'0'});env.start();self.addCleanup(env.stop)
+         self.c=TestClient(api.app);self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Fictional Emerald Explorer','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Emerald Explorer','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
+         for i,q in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{i}',json={'option':next(iter(q['options']))})
+         self.c.post(self.base+'/confirm',json={'interests':['technology','art']})
+     def progress(self):return self.c.get(self.base+'/career-discovery-milestone').json()
+@@ -32,7 +32,7 @@
+     def test_anonymous_has_no_invented_counts_or_success_claim(self):
+         value=self.c.get('/api/career-discovery-milestone').json();self.assertFalse(value['eligible']);self.assertTrue(all(v is None for v in value['counts'].values()));self.assertEqual(value['recovery_page'],'profiles')
+     def test_new_student_progress_is_zero_and_entry_is_blocked(self):
+-        pid=self.c.post('/api/profiles',json={'alias':'New Fictional','grade':9}).json()['profile']['id'];base='/api/profiles/'+pid
++        pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'New Fictional','grade':9}).json()['profile']['id'];base='/api/profiles/'+pid
+         value=self.c.get(base+'/career-discovery-milestone').json();self.assertEqual(value['counts'],{'careers_researched':0,'careers_shortlisted':0,'confirmed_interests':None});self.assertFalse(value['eligible']);self.assertEqual(value['recovery_page'],'quests');self.assertEqual(self.c.get(base+'/career-portfolio/entry').status_code,409)
+     def test_confirmed_without_shortlist_cannot_skip_eligibility(self):
+         self.assertFalse(self.progress()['eligible']);self.assertEqual(self.c.get(self.base+'/career-portfolio/entry').status_code,409)
+--- a/tests/test_career_recommendations_paths.py
++++ b/tests/test_career_recommendations_paths.py
+@@ -17,7 +17,7 @@
+         db=patch.object(api,'DB',self.path);db.start();self.addCleanup(db.stop)
+         env=patch.dict(os.environ,{'CAREERQUEST_CAREER_GROQ':'0','CAREERQUEST_DEV_TOOLS':'0'});env.start();self.addCleanup(env.stop)
+         self.c=TestClient(api.app);self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Fictional Path Explorer','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Path Explorer','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
+         for i,q in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{i}',json={'option':next(iter(q['options']))})
+         self.confirm(['technology'])
+     def confirm(self,interests,**extra):return self.c.post(self.base+'/confirm',json={'interests':interests,**extra})
+@@ -108,7 +108,7 @@
+         result=subprocess.run([sys.executable,'-c',code,self.path,self.pid],check=True,capture_output=True,text=True)
+         self.assertEqual(json.loads(result.stdout),expected)
+     def test_other_students_shortlist_cannot_supply_a_path(self):
+-        self.save('software');other=self.c.post('/api/profiles',json={'alias':'Other Fictional','grade':11}).json()['profile']['id']
++        self.save('software');other=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Other Fictional','grade':11}).json()['profile']['id']
+         for i,q in enumerate(api.QUESTS):self.c.post(f'/api/profiles/{other}/quests/{i}',json={'option':next(iter(q['options']))})
+         self.c.post(f'/api/profiles/{other}/confirm',json={'interests':['technology']})
+         response=self.c.post(f'/api/profiles/{other}/career-paths',json={'primary_world_id':'software','expected_profile_version':1,'expected_path_version':0})
+--- a/tests/test_career_worlds.py
++++ b/tests/test_career_worlds.py
+@@ -19,7 +19,7 @@
+         self.path=str(Path(self.temp.name)/'fictional.sqlite3')
+         override=patch.object(api,'DB',self.path);override.start();self.addCleanup(override.stop)
+         self.c=TestClient(api.app,base_url='http://127.0.0.1',client=('127.0.0.1',50000));self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Fictional Career Explorer','grade':10}).json()['profile']['id']
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Career Explorer','grade':10}).json()['profile']['id']
+         self.base='/api/profiles/'+self.pid
+         for step,quest in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{step}',json={'option':next(iter(quest['options']))})
+         self.c.post(self.base+'/confirm',json={'interests':['art'],'goal':'Explore'} )
+@@ -103,7 +103,7 @@
+         self.assertEqual(len(self.overview()['portfolio']['shortlist']),1)
+     def test_cross_profile_selection_and_revisit_rejected(self):
+         eid=self.explore().json()['exploration_ids']['design']
+-        other=self.c.post('/api/profiles',json={'alias':'Other Fictional','grade':12}).json()['profile']['id']
++        other=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Other Fictional','grade':12}).json()['profile']['id']
+         self.assertEqual(self.c.get('/api/profiles/'+other+'/career-explorations/'+eid).status_code,404)
+         with connect(self.path) as c:
+             with self.assertRaises(worlds.WorldUnknown):worlds.exploration(c,other,eid)
+--- a/tests/test_developer_research.py
++++ b/tests/test_developer_research.py
+@@ -15,7 +15,7 @@
+         db=patch.object(api,'DB',str(Path(temp.name)/'fictional.sqlite3'));db.start();self.addCleanup(db.stop)
+         env=patch.dict(os.environ,{'CAREERQUEST_ENV':'production','CAREERQUEST_DEV_TOOLS':'0','CAREERQUEST_HOST':'127.0.0.1','CAREERQUEST_CAREER_GROQ':'0'});env.start();self.addCleanup(env.stop)
+         self.c=TestClient(api.app,base_url='http://127.0.0.1',client=('127.0.0.1',49001));self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Fictional Debug Explorer','grade':11}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Debug Explorer','grade':11}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
+         for i,q in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{i}',json={'option':next(iter(q['options']))})
+         self.c.post(self.base+'/confirm',json={'interests':['art'],'correction':'PRIVATE_AUDIT_SENTINEL'})
+         self.dev='/api/developer/profiles/'+self.pid
+--- a/tests/test_discovery_agent.py
++++ b/tests/test_discovery_agent.py
+@@ -34,7 +34,7 @@
+         db = patch.object(api, 'DB', self.db); db.start(); self.addCleanup(db.stop)
+         env = patch.dict('os.environ', {'GROQ_API_KEY': 'synthetic-test-key', 'GROQ_MODEL': 'openai/gpt-oss-120b'}); env.start(); self.addCleanup(env.stop)
+         self.c = TestClient(api.app); self.addCleanup(self.c.close)
+-        self.pid = self.c.post('/api/profiles', json={'alias': 'Fictional Agent Explorer', 'grade': 11}).json()['profile']['id']
++        self.pid = self.c.post('/api/profiles', json={'fictional_ack':True,'alias': 'Fictional Agent Explorer', 'grade': 11}).json()['profile']['id']
+         self.base = f'/api/profiles/{self.pid}'
+         for step, quest in enumerate(api.QUESTS): self.c.post(self.base+f'/quests/{step}', json={'option': next(iter(quest['options']))})
+         self.real_selector = agent.groq_select_tool
+@@ -284,7 +284,7 @@
+         self.assertEqual(after['profile']['xp'], 70)
+ 
+     def test_incomplete_explorer_and_cross_profile_resume_cannot_supply_tool_context(self):
+-        second = self.c.post('/api/profiles', json={'alias': 'Second Fictional Agent', 'grade': 9}).json()['profile']['id']
++        second = self.c.post('/api/profiles', json={'fictional_ack':True,'alias': 'Second Fictional Agent', 'grade': 9}).json()['profile']['id']
+         self.assertEqual(self.c.post(f'/api/profiles/{second}/discovery-agent', json={'event': 'discover'}).status_code, 409)
+         self.selector.assert_not_called()
+         initial = self.initial()
+--- a/tests/test_discovery_feedback_workflow.py
++++ b/tests/test_discovery_feedback_workflow.py
+@@ -19,7 +19,7 @@
+         env = patch.dict('os.environ', {'GROQ_API_KEY': 'synthetic-test-key', 'GROQ_MODEL': 'openai/gpt-oss-120b'})
+         env.start(); self.addCleanup(env.stop)
+         self.client = TestClient(api.app); self.addCleanup(self.client.close)
+-        self.pid = self.client.post('/api/profiles', json={'alias': 'Nova Fictional', 'grade': 11}).json()['profile']['id']
++        self.pid = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'Nova Fictional', 'grade': 11}).json()['profile']['id']
+         self.base = f'/api/profiles/{self.pid}'
+         for index, quest in enumerate(api.QUESTS): self.client.post(self.base + f'/quests/{index}', json={'option': next(iter(quest['options']))})
+         self.model = patch('careerquest.discovery_guide.groq_discovery', side_effect=lambda grade, choices, model, preferences=None: guide.deterministic_summary(choices, preferences))
+--- a/tests/test_discovery_flow.py
++++ b/tests/test_discovery_flow.py
+@@ -15,7 +15,7 @@
+         self.temp=tempfile.TemporaryDirectory()
+         self.database=patch.object(api,'DB',str(Path(self.temp.name)/'discovery.sqlite3'));self.database.start()
+         self.client=TestClient(api.app)
+-        self.initial=self.client.post('/api/profiles',json={'alias':'Fictional Discovery Demo','grade':11}).json()
++        self.initial=self.client.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Discovery Demo','grade':11}).json()
+         self.pid=self.initial['profile']['id'];self.base=f'/api/profiles/{self.pid}'
+     def tearDown(self):
+         self.client.close();self.database.stop();self.temp.cleanup()
+--- a/tests/test_discovery_guide.py
++++ b/tests/test_discovery_guide.py
+@@ -20,7 +20,7 @@
+         self.env = patch.dict('os.environ', {'GROQ_API_KEY': 'synthetic-test-key', 'GROQ_MODEL': 'openai/gpt-oss-120b'})
+         self.env.start(); self.addCleanup(self.env.stop)
+         self.client = TestClient(api.app); self.addCleanup(self.client.close)
+-        self.pid = self.client.post('/api/profiles', json={'alias': 'Fictional Guide Explorer', 'grade': 10}).json()['profile']['id']
++        self.pid = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'Fictional Guide Explorer', 'grade': 10}).json()['profile']['id']
+         self.base = f'/api/profiles/{self.pid}'
+         self.complete()
+ 
+@@ -164,13 +164,13 @@
+         with connect(self.db) as c:
+             for index in range(25):
+                 c.execute('INSERT INTO discovery_stories SELECT ?,profile_id,?,response_version,source_answers,status,model,content,error_type,created_at FROM discovery_stories LIMIT 1', (f'limit-{index}', index + 6))
+-        new = self.client.post('/api/profiles', json={'alias': 'Second Fictional Explorer', 'grade': 9}).json()['profile']['id']
++        new = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'Second Fictional Explorer', 'grade': 9}).json()['profile']['id']
+         for step, quest in enumerate(api.QUESTS): self.client.post(f'/api/profiles/{new}/quests/{step}', json={'option': next(iter(quest['options']))})
+         with patch('careerquest.discovery_guide.groq_discovery') as model:
+             self.assertEqual(self.client.post(f'/api/profiles/{new}/discovery-guide', json={}).status_code, 429); model.assert_not_called()
+ 
+     def test_no_generation_for_incomplete_student_or_untrusted_context(self):
+-        new = self.client.post('/api/profiles', json={'alias': 'New Fictional Explorer', 'grade': 9}).json()['profile']['id']
++        new = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'New Fictional Explorer', 'grade': 9}).json()['profile']['id']
+         with patch('careerquest.discovery_guide.groq_discovery') as model:
+             self.assertEqual(self.client.post(f'/api/profiles/{new}/discovery-guide', json={}).status_code, 409)
+             self.assertEqual(self.generate().status_code, 200)  # Invalid mocked output becomes safe fallback.
+--- a/tests/test_discovery_handoff.py
++++ b/tests/test_discovery_handoff.py
+@@ -34,7 +34,7 @@
+         ):
+             patcher.start(); self.addCleanup(patcher.stop)
+         self.client = TestClient(api.app); self.addCleanup(self.client.close)
+-        self.pid = self.client.post('/api/profiles', json={'alias': 'Fictional Handoff Explorer', 'grade': 10}).json()['profile']['id']
++        self.pid = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'Fictional Handoff Explorer', 'grade': 10}).json()['profile']['id']
+         self.base = f'/api/profiles/{self.pid}'
+         for step, quest in enumerate(api.QUESTS):
+             self.assertEqual(self.client.post(self.base + f'/quests/{step}', json={'option': next(iter(quest['options']))}).status_code, 200)
+@@ -61,7 +61,7 @@
+         self.assertIsNone(self.handoff()); self.assertFalse(self.state()['confirmed'])
+ 
+     def test_incomplete_explorer_has_no_final_outcome_or_personalized_handoff(self):
+-        student = self.client.post('/api/profiles', json={'alias': 'Fictional Beginner', 'grade': 9}).json()
++        student = self.client.post('/api/profiles', json={'fictional_ack':True,'alias': 'Fictional Beginner', 'grade': 9}).json()
+         base = '/api/profiles/' + student['profile']['id']
+         self.assertIsNone(student['discovery_outcome']); self.assertIsNone(student['discovery_handoff']['active'])
+         choice = next(iter(api.QUESTS[0]['options']))
+--- /dev/null
++++ b/tests/test_explorer_setup.py
+@@ -0,0 +1,54 @@
++"""Strict setup and durable creation receipts, using only isolated fictional data."""
++import tempfile,unittest,uuid
++from concurrent.futures import ThreadPoolExecutor
++from pathlib import Path
++from unittest.mock import patch
++from fastapi.testclient import TestClient
++from careerquest import api
++from careerquest.store import connect
++
++class ExplorerSetupTests(unittest.TestCase):
++    def setUp(self):
++        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
++        override=patch.object(api,'DB',str(Path(self.tmp.name)/'fictional.sqlite3'));override.start();self.addCleanup(override.stop)
++        self.client=TestClient(api.app);self.addCleanup(self.client.close)
++        self.body={'alias':'  Fictional Compass  ','grade':9,'fictional_ack':True,'creation_key':str(uuid.uuid4())}
++    def count(self):
++        with connect(api.DB) as c:return c.execute('SELECT COUNT(*) FROM profiles').fetchone()[0]
++    def test_invalid_setup_cannot_write_a_profile(self):
++        invalid=[{'alias':''},{'alias':'  '},{'alias':'x'},{'alias':'x'*41},{'grade':8},{'grade':13},{'grade':'9'},{'grade':True},{'fictional_ack':False},{'fictional_ack':None},{'fictional_ack':1},{'fictional_ack':'true'},{'creation_key':'bad-key'}]
++        for change in invalid:
++            with self.subTest(change=change):self.assertEqual(self.client.post('/api/profiles',json=self.body|change).status_code,422)
++        for field in ['alias','grade','fictional_ack']:
++            body=self.body.copy();del body[field]
++            with self.subTest(missing=field):self.assertEqual(self.client.post('/api/profiles',json=body).status_code,422)
++        self.assertEqual(self.count(),0)
++    def test_repeat_retry_and_restart_return_same_profile_without_rewards_or_confirmation(self):
++        first=self.client.post('/api/profiles',json=self.body).json();pid=first['profile']['id']
++        self.assertEqual(first['profile']['alias'],'Fictional Compass')
++        self.assertEqual(first['profile']['xp'],0);self.assertFalse(first['confirmed']);self.assertEqual(first['events'],[])
++        for _ in range(3):self.assertEqual(self.client.post('/api/profiles',json=self.body).json(),first)
++        with TestClient(api.app) as restarted:
++            self.assertEqual(restarted.post('/api/profiles',json=self.body).json(),first)
++            self.assertEqual(restarted.get('/api/profiles/'+pid).json(),first)
++            self.assertEqual(restarted.post('/api/profiles/'+pid+'/confirm',json={'interests':['art']}).status_code,409)
++            self.assertEqual(restarted.post('/api/profiles/'+pid+'/worlds/software/explore',json={}).status_code,409)
++        self.assertEqual(self.count(),1)
++    def test_parallel_duplicate_submits_are_atomic(self):
++        with ThreadPoolExecutor(max_workers=5) as pool:
++            replies=list(pool.map(lambda _:self.client.post('/api/profiles',json=self.body),range(5)))
++        self.assertTrue(all(r.status_code==200 for r in replies));self.assertEqual(len({r.json()['profile']['id'] for r in replies}),1);self.assertEqual(self.count(),1)
++    def test_reusing_a_receipt_for_different_values_is_rejected(self):
++        self.assertEqual(self.client.post('/api/profiles',json=self.body).status_code,200)
++        for change in [{'alias':'Other Fictional'},{'grade':12}]:self.assertEqual(self.client.post('/api/profiles',json=self.body|change).status_code,409)
++        self.assertEqual(self.count(),1)
++    def test_switching_reads_preserve_existing_progress_and_never_lists_global_records(self):
++        first=self.client.post('/api/profiles',json=self.body).json()['profile']['id'];base='/api/profiles/'+first
++        self.client.post(base+'/quests/0',json={'option':next(iter(api.QUESTS[0]['options']))})
++        before=self.client.get(base).json()
++        second=self.client.post('/api/profiles',json=self.body|{'alias':'Second Fictional','grade':12,'creation_key':str(uuid.uuid4())}).json()
++        for _ in range(2):
++            self.assertEqual(self.client.get(base).json(),before)
++            self.assertEqual(self.client.get('/api/profiles/'+second['profile']['id']).json(),second)
++        self.assertEqual(before['profile']['xp'],20);self.assertEqual(second['profile']['xp'],0)
++        self.assertEqual(self.client.get('/api/profiles').status_code,404)
+--- a/tests/test_portfolio_flow.py
++++ b/tests/test_portfolio_flow.py
+@@ -20,7 +20,7 @@
+         db=patch.object(api,'DB',self.path);db.start();self.addCleanup(db.stop)
+         env=patch.dict(os.environ,{'CAREERQUEST_CAREER_GROQ':'0','CAREERQUEST_DEV_TOOLS':'0','GROQ_API_KEY':''});env.start();self.addCleanup(env.stop)
+         self.c=TestClient(api.app);self.addCleanup(self.c.close)
+-        self.pid=self.c.post('/api/profiles',json={'alias':'Cedar Fictional','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
++        self.pid=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Cedar Fictional','grade':10}).json()['profile']['id'];self.base='/api/profiles/'+self.pid
+         for i,q in enumerate(api.QUESTS):self.c.post(self.base+f'/quests/{i}',json={'option':next(iter(q['options']))})
+         self.c.post(self.base+'/confirm',json={'interests':['technology','art'],'learning_style':'Hands-on projects','goal':'Try a mini-project'})
+         self.events=self.c.get(self.base).json()['events']
+@@ -108,7 +108,7 @@
+         again=self.pdf(saved);self.assertEqual(self.text(again),text);self.assertNotIn('Different Fictional Alias',self.text(again));self.assertNotIn('Digital Product Design',self.text(again))
+         self.assertEqual(again.headers['content-type'],'application/pdf');self.assertIn('v1.pdf',again.headers['content-disposition'])
+     def test_pdf_and_saved_version_are_owned_by_the_requested_explorer(self):
+-        self.save();self.choose();saved=self.complete().json()['active'];other=self.c.post('/api/profiles',json={'alias':'Other Fictional','grade':9}).json()['profile']['id']
++        self.save();self.choose();saved=self.complete().json()['active'];other=self.c.post('/api/profiles',json={'fictional_ack':True,'alias':'Other Fictional','grade':9}).json()['profile']['id']
+         for suffix in ['', '/pdf']:
+             self.assertEqual(self.c.get(f'/api/profiles/{other}/career-portfolio/versions/{saved["id"]}'+suffix).status_code,404)
+             self.assertEqual(self.c.get(self.base+'/career-portfolio/versions/unknown'+suffix).status_code,404)
+--- a/tests/test_profile_review_flow.py
++++ b/tests/test_profile_review_flow.py
+@@ -27,7 +27,7 @@
+                   patch('careerquest.discovery_guide.groq_discovery', side_effect=lambda grade, choices, model, preferences=None: guide.deterministic_summary(choices, preferences))):
+             p.start(); self.addCleanup(p.stop)
+         self.c = TestClient(api.app); self.addCleanup(self.c.close)
+-        student = self.c.post('/api/profiles', json={'alias': 'Fictional Profile Review', 'grade': 9}).json()
++        student = self.c.post('/api/profiles', json={'fictional_ack':True,'alias': 'Fictional Profile Review', 'grade': 9}).json()
+         self.pid = student['profile']['id']; self.base = '/api/profiles/'+self.pid
+         for step, quest in enumerate(api.QUESTS): self.c.post(self.base+f'/quests/{step}', json={'option': next(iter(quest['options']))})
+         self.initial = self.c.post(self.base+'/discovery-agent', json={'event': 'discover'}).json()
+--- a/tests/test_welcome_flow.py
++++ b/tests/test_welcome_flow.py
+@@ -12,7 +12,7 @@
+     def test_create_reload_first_quest_and_confirmation_keep_one_explorer(self):
+         with tempfile.TemporaryDirectory() as directory, patch.object(api,'DB',str(Path(directory)/'welcome.sqlite3')):
+             with TestClient(api.app) as client:
+-                created=client.post('/api/profiles',json={'alias':'Fictional Welcome Demo','grade':10})
++                created=client.post('/api/profiles',json={'fictional_ack':True,'alias':'Fictional Welcome Demo','grade':10})
+                 self.assertEqual(created.status_code,200)
+                 state=created.json();pid=state['profile']['id'];base=f'/api/profiles/{pid}'
+                 self.assertEqual(state['profile']['xp'],0)

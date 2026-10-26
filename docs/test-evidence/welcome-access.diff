@@ -1,0 +1,93 @@
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -6,7 +6,7 @@
+ import {studentExperience} from './studentExperience';
+ import Welcome from './pages/Welcome';
+ import ExplorerSelection from './components/ExplorerSelection';
+-import {availableExplorers,creationRequest,finishCreation} from './explorerSetup';
++import {availableExplorers,creationRequest,finishCreation,leaveExplorer} from './explorerSetup';
+ import DiscoveryQuests from './pages/DiscoveryQuests';
+ import ExplorerProfile from './pages/ExplorerProfile';
+ import UnsavedChanges from './components/UnsavedChanges';
+@@ -90,6 +90,10 @@
+   useEffect(()=>{const protect=event=>{event.preventDefault();event.returnValue='';};if(profileDirty||questDirty||reflection.trim()){window.addEventListener('beforeunload',protect);return()=>window.removeEventListener('beforeunload',protect);}},[profileDirty,questDirty,reflection]);
+   useEffect(() => {if (proposal?.plan) document.getElementById('roadmap-proposal')?.scrollIntoView({behavior: 'smooth', block: 'start'});}, [proposal]);
+ 
++  const backToWelcome=()=>{
++    if(busy||creatingFromWelcome.current)return;
++    leaveExplorer();activeExplorer.current='';setPid('');setState(null);setCareerRecord(null);setCreatedProfileId('');hydrate(null);setResult(null);setProposal(null);setReflection('');setModel(false);setFail(false);setQuestDirty(false);setInterestPending(false);route('welcome');
++  };
+   const selectExplorer = id => action(async () => {
+     const saved = await api(`/profiles/${id}`); setCreatedProfileId(''); apply(saved); hydrate(saved); setResult(saved.last_research); setProposal(null); setReflection(''); setModel(false); setFail(false); route('welcome');
+   });
+@@ -155,7 +159,7 @@
+     {notice && <div className="alert notice" role="status"><Check size={17}/><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Dismiss notification"><X size={17}/></button></div>}
+     {loading && page!=='welcome' ? <div className="loading"><Compass className="spin" size={32}/><p>Finding your place on the map…</p></div> : <>
+ 
+-    {page==='profiles'&&<ExplorerSelection explorers={explorers} pid={pid} view={explorerView} onView={setExplorerView} onSelect={selectExplorer} onCreate={createFromWelcome} busy={busy}/>}
++    {page==='profiles'&&<ExplorerSelection onWelcome={backToWelcome} explorers={explorers} pid={pid} view={explorerView} onView={setExplorerView} onSelect={selectExplorer} onCreate={createFromWelcome} busy={busy}/>}
+ 
+     {page==='welcome'&&<Welcome explorers={explorers} onExplorerChoice={view=>{route('profiles');setExplorerView(view);}} state={state} experience={experience} createdProfileId={createdProfileId} loading={loading} error={entryError?error:''} onRetry={load} onNavigate={leaveHome} onCreate={createFromWelcome} busy={busy} questTotal={quests.length || 3}/>}
+     {page==='quests'&&<DiscoveryQuests key={pid} state={state} quests={quests} onNavigate={go} onAnswer={answer} busy={busy} onDirty={setQuestDirty}/>}
+--- a/frontend/src/explorerSetup.js
++++ b/frontend/src/explorerSetup.js
+@@ -24,3 +24,6 @@
+   }));
+   return saved.filter(Boolean);
+ }
++
++// Explicitly leave the active journey; remembered explorers and receipts stay intact.
++export function leaveExplorer(storage=localStorage){storage.removeItem('cq_pid');}
+--- a/frontend/src/components/ExplorerSelection.jsx
++++ b/frontend/src/components/ExplorerSelection.jsx
+@@ -2,8 +2,8 @@
+ import {ArrowUpRight,ShieldCheck} from 'lucide-react';
+ import ExplorerSetup from './ExplorerSetup';
+ import {Button,PageHeading} from './Shared';
+-export default function ExplorerSelection({explorers,pid,onSelect,onCreate,onView,view='switch',busy=false}) {
+- return <div className="explorer-selection"><PageHeading eyebrow="LOCAL FICTIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are fictional demo profiles remembered in this browser, not authenticated student accounts. Each keeps its own saved progress.</PageHeading><div className={`explorer-selection-layout selection-${view}`}>
++export default function ExplorerSelection({explorers,pid,onSelect,onCreate,onView,onWelcome,view='switch',busy=false}) {
++ return <div className="explorer-selection"><PageHeading eyebrow="LOCAL FICTIONAL DEMO" title={view==='create'?'A new adventure starts here.':'Switch Explorer'}>These are fictional demo profiles remembered in this browser, not authenticated student accounts. Each keeps its own saved progress.</PageHeading><div className="button-row"><Button className="secondary" onClick={onWelcome} disabled={busy} aria-describedby="welcome-return-help">Back to Welcome</Button><p id="welcome-return-help" className="small-note">Your saved explorers and progress stay available.</p></div><div className={`explorer-selection-layout selection-${view}`}>
+  {view!=='saved'&&<ExplorerSetup key="new-explorer" onCreate={onCreate} busy={busy}/>}
+  {view!=='create'&&<section className="panel saved-profiles" aria-labelledby="saved-explorers-title"><h2 id="saved-explorers-title">Your saved explorers</h2><p>Choose whose adventure to continue.</p>{explorers.length?explorers.map(explorer=><button className={`saved-explorer ${explorer.id===pid?'selected':''}`} key={explorer.id} disabled={busy} onClick={()=>onSelect(explorer.id)}><span className="mini-avatar" aria-hidden="true">{explorer.avatar||'🧭'}</span><span><strong>{explorer.alias?.trim()||'Explorer'}</strong><small>Grade {explorer.grade}{explorer.id===pid?' · Current explorer':''}</small></span><ArrowUpRight size={18} aria-hidden="true"/></button>):<p>No saved explorers are available to this browser yet.</p>}<p className="setup-local-note"><ShieldCheck size={20} aria-hidden="true"/>No email, real name, or birthday needed.</p>{view==='saved'&&<Button className="secondary" onClick={()=>onView('create')}>Create a New Explorer</Button>}</section>}
+  </div>{view==='create'&&explorers.length>0&&<Button className="ghost" onClick={()=>onView('saved')}>Back to saved explorers</Button>}</div>;
+--- a/frontend/src/components/explorer-setup.css
++++ b/frontend/src/components/explorer-setup.css
+@@ -32,3 +32,6 @@
+ @media(max-width:700px){.global-ui .explorer-setup-form label:not(.setup-avatar){font-size:17px}}
+ 
+ .global-ui .explorer-setup-form .setup-avatar{margin:0}
++
++.global-ui .explorer-selection>.button-row .button{font-size:17px;min-height:48px}
++.global-ui .explorer-selection #welcome-return-help{font-size:15px;line-height:1.6;margin:0}
+--- a/frontend/tests/explorer-setup.test.js
++++ b/frontend/tests/explorer-setup.test.js
+@@ -1,6 +1,6 @@
+ import test from 'node:test';
+ import assert from 'node:assert/strict';
+-import {availableExplorers,creationRequest,finishCreation,setupProblems} from '../src/explorerSetup.js';
++import {availableExplorers,creationRequest,finishCreation,setupProblems,leaveExplorer} from '../src/explorerSetup.js';
+ import {welcomeMode} from '../src/welcomeMode.js';
+ const valid={nickname:' Fictional Orbit ',grade:'10',fictional:true,avatar:'🚀'};
+ const storage=()=>{const items=new Map();return {getItem:key=>items.get(key)||null,setItem:(key,value)=>items.set(key,value),removeItem:key=>items.delete(key)};};
+@@ -34,3 +34,9 @@
+ test('unavailable backend cannot be mistaken for a fresh session',async()=>{
+  await assert.rejects(()=>availableExplorers([{id:'known'}],async()=>{throw new Error('Unavailable');}),/Unavailable/);
+ });
++
++test('explicit Back to Welcome clears only the active selection and preserves remembered explorers and retries',()=>{
++ const saved=storage();saved.setItem('cq_pid','existing-explorer');saved.setItem('cq_explorers',JSON.stringify([{id:'existing-explorer',alias:'Fictional Saved'}]));saved.setItem('cq_pending_creation','unchanged-receipt');
++ leaveExplorer(saved);assert.equal(saved.getItem('cq_pid'),null);assert.deepEqual(JSON.parse(saved.getItem('cq_explorers')),[{id:'existing-explorer',alias:'Fictional Saved'}]);assert.equal(saved.getItem('cq_pending_creation'),'unchanged-receipt');
++ leaveExplorer(saved);assert.equal(welcomeMode(null,'',JSON.parse(saved.getItem('cq_explorers'))),'choose');
++});
+--- a/frontend/tests/welcome-render.test.js
++++ b/frontend/tests/welcome-render.test.js
+@@ -107,3 +107,8 @@
+  if(view==='create')assert.doesNotMatch(html,/Fictional Saved/);
+  }
+ });
++
++test('switch view provides a visible keyboard-accessible return to Welcome without deleting explorers',()=>{
++ const html=renderToStaticMarkup(React.createElement(components.ExplorerSelection,{view:'switch',explorers:[{id:'saved',alias:'Fictional Saved',grade:10}],pid:'saved',onCreate:noop,onSelect:noop,onView:noop,onWelcome:noop}));
++ assert.match(html,/<button[^>]*aria-describedby="welcome-return-help"[^>]*> Back to Welcome<\/button>/);assert.match(html,/Your saved explorers and progress stay available/);assert.match(html,/Fictional Saved/);
++});

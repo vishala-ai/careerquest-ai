@@ -1,0 +1,35 @@
+[
+  {
+    "heroControls": 0,
+    "points": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "scrollWidth": 375,
+    "titleSize": "28px",
+    "trailPrimaryCount": 1,
+    "width": 375
+  },
+  {
+    "heroControls": 0,
+    "points": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "scrollWidth": 768,
+    "titleSize": "36px",
+    "trailPrimaryCount": 1,
+    "width": 768
+  },
+  {
+    "heroControls": 0,
+    "points": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "scrollWidth": 1280,
+    "titleSize": "36px",
+    "trailPrimaryCount": 1,
+    "width": 1280
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "confirmed": true,
+  "profile_version": 2,
+  "profile_interests": [
+    "art",
+    "science",
+    "research"
+  ],
+  "total_xp": 80,
+  "quest_xp": 60,
+  "personalized_proposal_status": 200,
+  "old_plans_unchanged": true
+}

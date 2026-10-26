@@ -1,0 +1,20 @@
+[
+  {
+    "persisted_status": "groq",
+    "model": "openai/gpt-oss-120b",
+    "error_type": null,
+    "world_ids": [],
+    "saved_interests": [
+      "technology",
+      "science",
+      "research"
+    ],
+    "supported_catalogue_world_ids": [
+      "bioengineering",
+      "software",
+      "design",
+      "environment"
+    ],
+    "diagnosis": "Valid empty array was permitted and cached; there was no empty-result catalogue fallback. No validation error was recorded."
+  }
+]

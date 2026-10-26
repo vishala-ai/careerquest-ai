@@ -1,0 +1,14 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "developer_routes": {
+    "/developer": 403,
+    "/api/developer/access": 403
+  },
+  "all_existing_database_rows_unchanged": true,
+  "schema_changes": false,
+  "normal_backend_port": 8000
+}

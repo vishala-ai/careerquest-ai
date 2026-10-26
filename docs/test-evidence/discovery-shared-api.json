@@ -1,0 +1,19 @@
+{
+  "profile_id": "8c5df79c-d6af-4327-bf07-f6ada7c74760",
+  "total_xp": 70,
+  "quest_xp": 60,
+  "xp_event_count": 3,
+  "revision_xp": 0,
+  "old_confirmed_profile_preserved": true,
+  "all_roadmap_rows_unchanged": true,
+  "roadmap_versions": [
+    1,
+    2
+  ],
+  "repeated_save_unchanged": true,
+  "unconfirmed_gate_statuses": {
+    "/explore": 409,
+    "/roadmap/propose": 409,
+    "/roadmap/save": 409
+  }
+}

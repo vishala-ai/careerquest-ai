@@ -1,0 +1,13 @@
+{
+  "health": {
+    "status": "ok",
+    "mode": "fictional_local_demo",
+    "agent_engine": "langgraph"
+  },
+  "anonymous_milestone_endpoint": "passed",
+  "developer_access_status": 403,
+  "all_database_rows_unchanged": true,
+  "schema_changes": false,
+  "backend_port": 8000,
+  "startup_note": "Initial probe hit the old process during handover and returned 404. Verified new listening process, then endpoint passed."
+}

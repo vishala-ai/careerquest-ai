@@ -1,0 +1,26 @@
+{
+  "new_profiles": 8,
+  "per_grade": {
+    "9": 2,
+    "10": 2,
+    "11": 2,
+    "12": 2
+  },
+  "existing_profiles_preserved": 5,
+  "all_preexisting_rows_unchanged": true,
+  "schema_unchanged": true,
+  "added_rows": {
+    "discovery_handoffs": 8,
+    "events": 32,
+    "profiles": 8
+  },
+  "all_profiles_confirmed": true,
+  "saved_quests_each": 3,
+  "xp_each": 70,
+  "researched_or_shortlisted_careers_each": 0,
+  "path_or_portfolio_versions_each": 0,
+  "ai_stories_seeded": 0,
+  "browser_switch_checks": 8,
+  "recommended_career_view_checked": "Demo G9 - Canvas Comet",
+  "code_changes": false
+}

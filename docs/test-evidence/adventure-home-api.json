@@ -1,0 +1,14 @@
+{
+  "test_origin": "http://127.0.0.1:18082",
+  "synthetic_profile_id": "515c044b-c1ae-4543-b7fc-1361817427a9",
+  "restart_state_identical": true,
+  "xp": 70,
+  "quest_count": 3,
+  "confirmed": false,
+  "saved_roadmap_version": 1,
+  "direct_gate_statuses": {
+    "/explore": 409,
+    "/roadmap/propose": 409,
+    "/roadmap/save": 409
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "body": "17px",
+    "forms": 1,
+    "mode": "welcome-page welcome-mode-setup",
+    "scrollWidth": 375,
+    "title": "28px",
+    "trailPrimary": 0,
+    "width": 375
+  },
+  {
+    "body": "18px",
+    "forms": 1,
+    "mode": "welcome-page welcome-mode-setup",
+    "scrollWidth": 768,
+    "title": "36px",
+    "trailPrimary": 0,
+    "width": 768
+  },
+  {
+    "body": "18px",
+    "forms": 1,
+    "mode": "welcome-page welcome-mode-setup",
+    "scrollWidth": 1280,
+    "title": "36px",
+    "trailPrimary": 0,
+    "width": 1280
+  },
+  {
+    "body": "17px",
+    "forms": 0,
+    "mode": "welcome-page welcome-mode-returning",
+    "scrollWidth": 375,
+    "title": "28px",
+    "trailPrimary": 1,
+    "width": 375
+  },
+  {
+    "body": "18px",
+    "forms": 0,
+    "mode": "welcome-page welcome-mode-returning",
+    "scrollWidth": 768,
+    "title": "36px",
+    "trailPrimary": 1,
+    "width": 768
+  },
+  {
+    "body": "18px",
+    "forms": 0,
+    "mode": "welcome-page welcome-mode-returning",
+    "scrollWidth": 1280,
+    "title": "36px",
+    "trailPrimary": 1,
+    "width": 1280
+  }
+]

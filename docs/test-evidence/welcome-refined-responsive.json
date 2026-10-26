@@ -1,0 +1,28 @@
+[
+  {
+    "scrollWidth": 375,
+    "supporting": [
+      "17px"
+    ],
+    "title": "28px",
+    "width": 375
+  },
+  {
+    "scrollWidth": 769,
+    "supporting": [
+      "18px",
+      "17px"
+    ],
+    "title": "36px",
+    "width": 769
+  },
+  {
+    "scrollWidth": 1280,
+    "supporting": [
+      "18px",
+      "17px"
+    ],
+    "title": "36px",
+    "width": 1280
+  }
+]

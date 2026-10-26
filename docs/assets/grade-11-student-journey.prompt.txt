@@ -1,0 +1,67 @@
+Mode: built-in image generation
+
+Use case: infographic-diagram.
+Create a polished, high-resolution portrait infographic (approximately 2:3), suitable for a Google Docs project companion and a presentation. It depicts an ILLUSTRATIVE FICTIONAL Grade 11 student's end-to-end CareerQuest AI journey. This is a student persona / user-experience journey, NEVER a psychological diagnosis or aptitude assessment.
+
+Visual style: friendly modern educational adventure, elegant flat vector-style illustration rendered as a finished raster image, white rounded milestone cards, luminous lavender/sky background, deep purple branding, teal confirmation, blue exploration, emerald and gold celebration. Large exceptionally clear typography, excellent contrast, generous whitespace. A continuous curved dotted adventure path connects EIGHT numbered milestone cards in unambiguous 1-to-8 top-to-bottom reading order. Small compass, creative sketch, editable profile, source/book, bookmark, mountain and branching map illustrations. Consistent visual hierarchy. One small welcoming illustrated fictional student avatar; no photographs or real personal information. Keep decorative art subordinate to legible information. Do NOT depict a screenshot or claim this is a live saved profile.
+
+Exact title:
+"CareerQuest AI"
+"Alex’s Grade 11 Discovery Journey"
+Small subtitle: "Student persona • Illustrative fictional example"
+
+Compact persona introduction:
+"Starting thought"
+"“I’m curious, but I don’t need to choose my whole future today.”"
+
+Eight stages, each with the exact concise wording below, numbered clearly:
+1. "Welcome & Create"
+"Fictional nickname • Avatar • Grade 11"
+"Create My Explorer"
+
+2. "Discover My Interests"
+"Sketch an invention"
+"Build a tracking tool"
+"Collaborate with a team"
+Small label: "Three saved quest choices"
+
+3. "Read My Discovery Story"
+"Evidence-linked interest clues"
+"An optional mini-mission"
+Small label: "AI or clearly labeled fallback"
+
+4. "Make My Profile Mine"
+"Yes / Somewhat / Not really"
+"Edit, review, then explicitly confirm"
+Interest chips: "Art" "Coding" "People"
+
+5. "Explore Career Worlds"
+"Digital Product Design"
+"Software Development"
+"Compare activities, skills and sources"
+
+6. "Save My Possibilities"
+"Explicitly shortlist researched careers"
+"Primary: Digital Product Design"
+"Optional secondary: Software Development"
+Small note: "“I’m Still Exploring” is valid too"
+
+7. "Celebrate My Discoveries"
+"My interests and saved choices, connected"
+"Open my portfolio preview"
+Small label: "Preview is not saved yet"
+
+8. "Confirm & Save My Portfolio"
+"A branching map of possibilities"
+"Saved version • Supporting sources • PDF"
+"Revisit and create an updated version"
+
+Bottom outcome band:
+"Ending thought"
+"“I have possibilities to explore—and I can change direction.”"
+
+Footer, clearly legible:
+"Student choices stay in control."
+"A map of possibilities, not a permanent career decision."
+
+Accuracy constraints: Feedback never automatically confirms the profile. Career suggestions are not automatically shortlisted. Portfolio preview is not a saved portfolio. Explicit confirmation precedes personalized research. Preserve this causal order. No fake citations, live AI receipts, XP totals, fit scores, intelligence claims, personality types, rankings, college admissions predictions, invented credentials or third-party logos. All named choices and careers are an illustrative scenario, not measured achievements. Do not add more copy. Proofread every word and use actual clean readable text.

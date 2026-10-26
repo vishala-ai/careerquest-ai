@@ -1,0 +1,4 @@
+# Illustrative development command; Replit config varies by workspace.
+# Build frontend with `cd frontend && npm install && npm run build` first.
+# Do not expose this unauthenticated demo publicly.
+run = "python -m uvicorn careerquest.api:app --host 127.0.0.1 --port 8000"

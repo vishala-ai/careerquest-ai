@@ -1,0 +1,64 @@
+{
+  "cause": "Compare, guide, next-action and saved-career/path sections were siblings outside the detail conditional, so they rendered beneath every single-career, comparison and preview view.",
+  "change": "Shared controls render only when no career detail is open. The detail retains source notes, optional mission, explicit shortlist save and Back to Recommended Careers. Celebration and milestone shortlist/path actions clear detail before focusing the overview.",
+  "changed_source_files": [
+    "frontend/src/pages/CareerWorlds.jsx"
+  ],
+  "backend_modified": false,
+  "normal_database_writes": false,
+  "protected_source_changes": [],
+  "tests": {
+    "frontend": {
+      "passed": 188,
+      "failed": 0,
+      "skipped": 0
+    },
+    "backend": {
+      "passed": 208,
+      "failed": 0,
+      "skipped": 0
+    },
+    "production_build": "passed"
+  },
+  "commands": [
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai",
+      "command": ".venv/bin/python -m unittest discover -s tests -v"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm test"
+    },
+    {
+      "cwd": "/Users/vishalakosaraju/Downloads/careerquest_ai/frontend",
+      "command": "PATH=/private/tmp/careerquest-node-runtime/node-v22.15.0-darwin-arm64/bin:$PATH npm run build"
+    }
+  ],
+  "browser_passed": [
+    "Unconfirmed catalogue preview hides shared controls and preserves the profile gate.",
+    "Direct unconfirmed research API returns HTTP 409.",
+    "Confirmed single-career detail retains ten citation links, sources, optional activity and explicit Save; comparison form, guide, next-action, shortlist and paths are absent.",
+    "First shortlist save persists and View My Shortlist returns to the overview with keyboard focus on shortlist.",
+    "Two-career comparison displays its result table and both sourced details without comparison selection form or other shared controls underneath.",
+    "Second shortlist save persists and Choose My Paths returns to the overview with focus on path selection.",
+    "A primary path saves on the overview; milestone View My Career Shortlist returns to saved path preferences.",
+    "Revisit saved detail retains its disabled Saved to My Career Shortlist button and focused layout.",
+    "Desktop 1280px and mobile 375px document width equals viewport; Back and Save remain present."
+  ],
+  "isolated_fixture": {
+    "directory": "/private/tmp/careerquest-detail-focus-s7wi11ob",
+    "profile_id": "f444af58-5485-426d-bac9-a1e999719b19",
+    "xp_before_research": 70,
+    "xp_after_research_shortlist_and_paths": 70,
+    "initialization": "A fictional explorer was created through setup, then quests and explicit API confirmation seeded as an isolated test fixture. This is not a new full Discovery Agent walkthrough."
+  },
+  "unverified": [
+    "No new live Groq free-text request; research uses the existing curated sources.",
+    "No full screen-reader or OS reduced-motion audit; existing styles and native button controls unchanged.",
+    "No new saved portfolio or PDF walkthrough; their regression suites passed."
+  ],
+  "screenshots": [
+    "career-detail-focused-desktop.jpg",
+    "career-detail-focused-mobile.jpg"
+  ]
+}

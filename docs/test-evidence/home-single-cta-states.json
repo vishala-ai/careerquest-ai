@@ -1,0 +1,80 @@
+[
+  {
+    "facts": [
+      "Grade 10",
+      "0 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "A fresh adventure is waiting for you. 3 short discovery quests will help you collect your first clues.",
+    "trailAction": "Start My First Quest",
+    "trailPrimaryCount": 1,
+    "phase": "new saved explorer"
+  },
+  {
+    "facts": [
+      "Grade 10",
+      "20 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "You’ve completed 1 of 3 discovery quests. Every clue helps you notice what sparks your curiosity.",
+    "trailAction": "Continue Quest 2",
+    "trailPrimaryCount": 1,
+    "phase": "partial quests after reload"
+  },
+  {
+    "facts": [
+      "Grade 10",
+      "60 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "Your discovery quests are complete. These clues are yours to shape into an Explorer Profile that feels right.",
+    "trailAction": "Review My Explorer Profile",
+    "trailPrimaryCount": 1,
+    "phase": "quests completed before confirmation"
+  },
+  {
+    "facts": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "Your Explorer Profile is confirmed. A world of possibilities is waiting for your curiosity.",
+    "trailAction": "Explore Career Worlds",
+    "trailPrimaryCount": 1,
+    "phase": "confirmed profile"
+  },
+  {
+    "facts": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "Your roadmap is saved. Small steps and a little reflection can help you keep growing.",
+    "trailAction": "Explore Career Worlds",
+    "trailPrimaryCount": 1,
+    "phase": "saved roadmap with Explore recommended"
+  },
+  {
+    "facts": [
+      "Grade 10",
+      "70 Explorer Points earned"
+    ],
+    "greeting": "Hi, Nova Single Trail! 👋",
+    "headerSwitchCount": 1,
+    "heroNavigationControls": 0,
+    "message": "Your interests can grow with you. Your updated Explorer Profile is ready for another review, and your earlier discoveries are saved.",
+    "trailAction": "Review My Explorer Profile",
+    "trailPrimaryCount": 1,
+    "phase": "profile-change and reconfirmation"
+  }
+]

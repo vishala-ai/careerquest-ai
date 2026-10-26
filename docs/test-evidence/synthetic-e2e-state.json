@@ -1,0 +1,165 @@
+{
+  "profile": {
+    "id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+    "alias": "Synthetic E2E Explorer",
+    "grade": 11,
+    "interests": [
+      "technology",
+      "building",
+      "coding",
+      "design"
+    ],
+    "xp": 90
+  },
+  "quest_count": 3,
+  "quest_complete": true,
+  "confirmed": true,
+  "confirmation_version": 2,
+  "latest_plan": {
+    "id": "8b257a0b-bc07-4651-b118-4df2c628c2e4",
+    "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+    "version": 2,
+    "content": {
+      "activities": [
+        "Compare two pathways using cited sources",
+        "Try a mini-project and reflect on what you enjoyed",
+        "Verify college program prerequisites on official websites",
+        "Compare affordability and major fit with a counselor",
+        "Try a small project inspired by Explore Occupations"
+      ],
+      "grade": 11,
+      "interests": [
+        "technology",
+        "building",
+        "coding",
+        "design"
+      ],
+      "note": "Suggested exploration only. Verify school-specific requirements and deadlines with official sources.",
+      "sources": [
+        {
+          "id": "onet",
+          "live_verified": false,
+          "source": "O*NET Resource Center",
+          "title": "Explore Occupations",
+          "url": "https://www.onetcenter.org/"
+        },
+        {
+          "id": "software",
+          "live_verified": false,
+          "source": "BLS Occupational Outlook Handbook",
+          "title": "Software Development",
+          "url": "https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm"
+        },
+        {
+          "id": "design",
+          "live_verified": false,
+          "source": "CareerQuest curated demo content",
+          "title": "Digital Product Design",
+          "url": ""
+        },
+        {
+          "id": "bioengineering",
+          "live_verified": false,
+          "source": "BLS Occupational Outlook Handbook",
+          "title": "Biomedical Engineering",
+          "url": "https://www.bls.gov/ooh/architecture-and-engineering/bioengineers-and-biomedical-engineers.htm"
+        }
+      ]
+    },
+    "created_at": "2026-10-24T22:25:00.628111+00:00"
+  },
+  "events": [
+    {
+      "id": "caa9a446-a198-453e-8fc0-38c4948e9824:quest:0",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "quest_completed",
+      "payload": {
+        "choice": "Build a mini-app",
+        "interest": "technology",
+        "quest": 0
+      },
+      "created_at": "2026-10-24T22:23:41.102339+00:00"
+    },
+    {
+      "id": "caa9a446-a198-453e-8fc0-38c4948e9824:quest:1",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "quest_completed",
+      "payload": {
+        "choice": "Analyze the data",
+        "interest": "science",
+        "quest": 1
+      },
+      "created_at": "2026-10-24T22:23:44.241704+00:00"
+    },
+    {
+      "id": "caa9a446-a198-453e-8fc0-38c4948e9824:quest:2",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "quest_completed",
+      "payload": {
+        "choice": "Build something",
+        "interest": "building",
+        "quest": 2
+      },
+      "created_at": "2026-10-24T22:23:46.898534+00:00"
+    },
+    {
+      "id": "e3b18591-9dd8-42df-a4f7-c780988f41a7",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "profile_confirmed",
+      "payload": {
+        "goal": "Try a mini-project",
+        "interests": [
+          "technology",
+          "science",
+          "building",
+          "coding"
+        ],
+        "learning_style": "Hands-on projects"
+      },
+      "created_at": "2026-10-24T22:24:05.342105+00:00"
+    },
+    {
+      "id": "7708a066-ffd5-4faf-8a56-f347e90bac3a",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "roadmap_saved",
+      "payload": {
+        "version": 1
+      },
+      "created_at": "2026-10-24T22:24:36.827783+00:00"
+    },
+    {
+      "id": "4355ac79-611c-49de-aea0-8327d9248148",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "reflection",
+      "payload": {
+        "text": "Reflection: Synthetic reflection: I enjoyed building a mini-app and want to explore coding and digital design."
+      },
+      "created_at": "2026-10-24T22:24:40.797246+00:00"
+    },
+    {
+      "id": "4e97bc40-664e-46d0-8c92-52ceff4fa962",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "profile_confirmed",
+      "payload": {
+        "goal": "Try a mini-project",
+        "interests": [
+          "technology",
+          "building",
+          "coding",
+          "design"
+        ],
+        "learning_style": "Hands-on projects"
+      },
+      "created_at": "2026-10-24T22:24:51.095149+00:00"
+    },
+    {
+      "id": "d88f0420-6dc9-4da3-a767-ad582ade224b",
+      "profile_id": "caa9a446-a198-453e-8fc0-38c4948e9824",
+      "kind": "roadmap_saved",
+      "payload": {
+        "version": 2
+      },
+      "created_at": "2026-10-24T22:25:00.628520+00:00"
+    }
+  ]
+}

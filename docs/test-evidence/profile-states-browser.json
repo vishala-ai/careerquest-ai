@@ -1,0 +1,105 @@
+{
+  "status": "passed",
+  "mode": "isolated fictional database, labeled deterministic fallback; no live inference check in this increment",
+  "checks": {
+    "new_unconfirmed": true,
+    "inline_interest_editing": true,
+    "explicit_confirmation": true,
+    "confirmed_interest_cards": true,
+    "original_note_preserved_in_details": true,
+    "editing_prefilled_values": true,
+    "refreshed_interpretation_after_save": true,
+    "explicit_reconfirmation": true,
+    "versions_hidden_in_secondary_details": true,
+    "keyboard_confirmation_and_details": true
+  },
+  "responsive": [
+    {
+      "bodySize": "17px",
+      "cardTitleSize": "21px",
+      "scrollWidth": 375,
+      "state": "confirmed",
+      "titleSize": "28px",
+      "versionVisible": false,
+      "width": 375
+    },
+    {
+      "bodySize": "18px",
+      "cardTitleSize": "21px",
+      "scrollWidth": 768,
+      "state": "confirmed",
+      "titleSize": "36px",
+      "versionVisible": false,
+      "width": 768
+    },
+    {
+      "bodySize": "18px",
+      "cardTitleSize": "21px",
+      "scrollWidth": 1279,
+      "state": "confirmed",
+      "titleSize": "36px",
+      "versionVisible": false,
+      "width": 1279
+    },
+    {
+      "correctionSize": "18px",
+      "savedCorrection": "I would like to explore art and coding together.",
+      "scrollWidth": 375,
+      "state": "editing",
+      "titleSize": "28px",
+      "width": 375
+    },
+    {
+      "correctionSize": "18px",
+      "savedCorrection": "I would like to explore art and coding together.",
+      "scrollWidth": 768,
+      "state": "editing",
+      "titleSize": "36px",
+      "width": 768
+    },
+    {
+      "correctionSize": "18px",
+      "savedCorrection": "I would like to explore art and coding together.",
+      "scrollWidth": 1279,
+      "state": "editing",
+      "titleSize": "36px",
+      "width": 1279
+    },
+    {
+      "editableInterests": true,
+      "feedbackRadios": 3,
+      "scrollWidth": 375,
+      "state": "unconfirmed",
+      "titleSize": "28px",
+      "width": 375
+    },
+    {
+      "editableInterests": true,
+      "feedbackRadios": 3,
+      "scrollWidth": 768,
+      "state": "unconfirmed",
+      "titleSize": "36px",
+      "width": 768
+    },
+    {
+      "editableInterests": true,
+      "feedbackRadios": 3,
+      "scrollWidth": 1279,
+      "state": "unconfirmed",
+      "titleSize": "36px",
+      "width": 1279
+    }
+  ],
+  "xp_sequence": [
+    0,
+    60,
+    70,
+    70,
+    80
+  ],
+  "console_errors": [],
+  "unverified": [
+    "full assistive-technology audit",
+    "live Groq inference"
+  ]
+}

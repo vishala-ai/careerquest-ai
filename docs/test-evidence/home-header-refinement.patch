@@ -1,0 +1,509 @@
+--- a/README.md
++++ b/README.md
+@@ -1,8 +1,10 @@
+ # CareerQuest AI — High School to College Adventure
++
++Adventure Home now has portfolio-aware messaging and a brighter four-stage trail. The shared header has one four-item navigation menu; its duplicate progress strip is removed. Current saved portfolios show a completed trail with View My Portfolio, while older snapshots remain distinct and revisitable. See [focused Home/header verification, diff and screenshots](docs/HOME_HEADER_REFINEMENT_VERIFICATION.md).
+ 
+ Explore Careers now saves career/path preferences, including an explicit undecided choice, before the emerald milestone. My Portfolio assembles a visual preview without repeated path controls; explicit confirmation saves an immutable version with a version-specific PDF download. See [portfolio flow changes, exact test results and limitations](docs/PORTFOLIO_FLOW_VERIFICATION.md).
+ 
+-The shared student UI now uses four primary destinations: Home, Discover, Explore Careers and My Portfolio. A persistent header shows saved identity, Explorer Points and Discover → Confirm → Explore → Celebrate progress; profile review/switching and earlier activities remain in the student menu. See [global UI changes, exact test results and browser limitations](docs/GLOBAL_UI_VERIFICATION.md).
++The shared student UI now uses four primary destinations: Home, Discover, Explore Careers and My Portfolio. The shared header shows saved identity and Explorer Points; the full Discover → Confirm → Explore → Celebrate trail is on Home. Profile review/switching and earlier activities remain in the student menu. See [global UI changes, exact test results and browser limitations](docs/GLOBAL_UI_VERIFICATION.md).
+ 
+ Career Worlds now leads through an emerald Career Discovery Milestone before portfolio controls, with backend-derived counts, server-checked eligibility and a read-only visual map of saved choices. Viewing or entering does not save a portfolio or award points. See [implementation, changed files and actual verification](docs/CAREER_WORLDS_VERIFICATION.md#current-increment-emerald-career-discovery-milestone).
+ 
+--- a/frontend/src/components/AppShell.jsx
++++ b/frontend/src/components/AppShell.jsx
+@@ -1,14 +1,19 @@
+-import React from 'react';
++import React,{useEffect,useRef} from 'react';
+ import {Compass,RefreshCw} from 'lucide-react';
+ import Navigation,{PRIMARY_PAGES} from './Navigation';
+ import XPBadge from './XPBadge';
+ import StudentIdentity from './StudentIdentity';
+-import StageProgress from './StageProgress';
+-import {studentExperience,primaryDestination,activeStage} from '../studentExperience';
++import {studentExperience,primaryDestination} from '../studentExperience';
+ export {PRIMARY_PAGES};
+ 
+-export default function AppShell({page,state,career,careerScreen='worlds',avatar,onNavigate,children,busy=false,progressLoading=false}) {
+- const experience=studentExperience(state,career),stage=activeStage(page,careerScreen,experience);
++export default function AppShell({page,state,career,careerScreen='worlds',avatar,onNavigate,children,busy=false}) {
++ const experience=studentExperience(state,career),shell=useRef(null),header=useRef(null);
++ useEffect(()=>{
++  const measure=()=>shell.current?.style.setProperty('--header-offset',`${Math.ceil(header.current?.getBoundingClientRect().height||0)+16}px`);
++  measure();
++  if(typeof ResizeObserver!=='undefined'){const observer=new ResizeObserver(measure);observer.observe(header.current);return()=>observer.disconnect();}
++  window.addEventListener('resize',measure);return()=>window.removeEventListener('resize',measure);
++ },[]);
+  const accent=page==='confirm'?'confirm':page==='quests'?'discover':['worlds','portfolio'].includes(page)?careerScreen==='worlds'?'explore':'celebrate':'home';
+- return <div className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></div><Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/><StageProgress stages={experience.stages} current={stage} onNavigate={onNavigate} busy={busy} loading={progressLoading}/>{experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
++ return <div ref={shell} className={`app spec-shell global-ui accent-${accent}`}><a href="#main" className="skip-link">Skip to content</a><header ref={header} className="global-header"><div className="global-header-top"><button className="brand global-brand" onClick={()=>onNavigate('welcome')} aria-label="CareerQuest AI Home"><span className="brand-symbol"><Compass size={25} aria-hidden="true"/></span><span>CareerQuest <b>AI</b></span></button><XPBadge state={state}/><StudentIdentity state={state} avatar={avatar} onNavigate={onNavigate} busy={busy} needsReview={experience.needsReview}/></div><Navigation current={primaryDestination(page,careerScreen)} onNavigate={onNavigate} busy={busy}/>{experience.needsReview&&<button className="global-review-notice" onClick={()=>onNavigate('confirm')}><RefreshCw size={17} aria-hidden="true"/><span><strong>Profile Needs Review.</strong> Confirm your updated preferences before new personalized research.</span></button>}</header>{children}</div>;
+ }
+--- a/frontend/src/components/StudentTrail.jsx
++++ b/frontend/src/components/StudentTrail.jsx
+@@ -8,22 +8,23 @@
+ export default function StudentTrail({journey, onNavigate, busy=false, setupFormId='welcome-explorer-setup', setupReady=false}) {
+   const id = useId();
+   const milestones = trailMilestones(journey);
+-  const route=milestones.length===4?'M125 73 C250 73 250 163 375 163 S500 73 625 73 S750 163 875 163':'M100 73 C200 73 200 163 300 163 S400 73 500 73 S600 163 700 163 S800 73 900 73';
+-  return <section className="student-trail" aria-labelledby={`${id}-title`}>
++  const route=milestones.length===4?'M125 86 C250 86 250 150 375 150 S500 86 625 86 S750 150 875 150':'M100 86 C200 86 200 150 300 150 S400 86 500 86 S600 150 700 150 S800 86 900 86';
++  return <section className={`student-trail${journey.complete?' is-finished':''}`} aria-labelledby={`${id}-title`}>
+     <div className="trail-heading"><div><span className="welcome-eyebrow">YOUR STUDENT JOURNEY</span><h2 id={`${id}-title`}>Your Adventure Trail</h2><p>Follow your curiosity, one small adventure at a time.</p></div><span className="trail-heading-art" aria-hidden="true"><Compass size={37}/><Sparkles size={22}/></span></div>
+     <p className="trail-guidance">{milestones.map(stage=>stage.title).join(' → ')}. Completed and available stops are yours to revisit.</p>
+     <div className="trail-landscape">
+-      <svg className="trail-route" viewBox="0 0 1000 300" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id={`${id}-route`}><stop stopColor="#8760c8"/><stop offset="1" stopColor="#3c9c92"/></linearGradient></defs><path className="trail-route-shadow" d={route}/><path stroke={`url(#${id}-route)`} d={route}/></svg>
++      <svg className="trail-route" viewBox="0 0 1000 260" preserveAspectRatio="none" aria-hidden="true" focusable="false"><defs><linearGradient id={`${id}-route`}><stop stopColor="#6D28D9"/><stop offset=".35" stopColor="#0F766E"/><stop offset=".68" stopColor="#1D4ED8"/><stop offset="1" stopColor="#065F46"/></linearGradient></defs><path className="trail-route-shadow" d={route}/><path stroke={`url(#${id}-route)`} d={route}/></svg>
++      <svg className="trail-route-mobile" viewBox="0 0 100 1000" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M50 20C20 120 80 200 50 300S20 450 50 500S80 650 50 700S20 850 50 980"/></svg>
+       <div className="trail-scenery" aria-hidden="true"><Leaf className="trail-leaf" size={66} strokeWidth={1}/><Sparkles className="trail-spark" size={31}/><Flag className="trail-flag" size={40} strokeWidth={1.3}/></div>
+       <ol className="trail-stops" style={{'--trail-count':milestones.length}} aria-label={`${milestones.map(stage=>stage.title).join(', ')} adventure trail`}>{milestones.map((stage,index)=>{
+         const Icon = icons[stage.id];
+-        const target=stage.active?(journey.action.target||stage.id):stage.id;
++        const target=stage.target;
+         const StatusIcon = stage.locked?LockKeyhole:stage.done?Check:stage.active?Sparkles:LockOpen;
+         const descriptionId = `${id}-${stage.id}-description`;
+-        return <li key={stage.id} className={`trail-stop ${stage.active?'is-recommended':''} ${stage.done?'is-completed':''} ${stage.locked?'is-locked':'is-actionable'}`}>
+-          <div className="trail-node-wrap"><button className="trail-node" disabled={stage.locked||busy} onClick={()=>onNavigate(target)} aria-label={`${stage.title}: ${stage.status}${(stage.previouslyCompleted||stage.done&&stage.status!=='Completed')?' · Previously completed':''}. ${stage.actionLabel}`} aria-describedby={descriptionId} aria-current={stage.active?'step':undefined}><Icon size={43} aria-hidden="true"/><span className="trail-node-badge" aria-hidden="true"><StatusIcon size={18}/></span></button></div>
+-          <div className="trail-details">{stage.active&&<span className="trail-next-label">Your Next Adventure</span>}<h3>{String(index+1).padStart(2,'0')} · {stage.title}</h3><span className="trail-status"><StatusIcon size={16} aria-hidden="true"/>{stage.status}</span>{stage.done&&stage.status!=='Completed'&&<span className="trail-history-label">Previously completed</span>}<p id={descriptionId}>{stage.description}{stage.prerequisite&&<span className="trail-prerequisite">{stage.prerequisite}</span>}</p>
+-            {stage.active ? journey.action.requiresSetup?<button className="trail-primary" type="submit" form={setupFormId} disabled={busy||!setupReady}>Start My First Quest<ArrowRight size={18} aria-hidden="true"/></button>:<button className="trail-primary" disabled={stage.locked||busy} onClick={()=>onNavigate(target)}>{stage.actionLabel}<ArrowRight size={18} aria-hidden="true"/></button>:!stage.locked&&<button className="trail-revisit" disabled={busy} onClick={()=>onNavigate(stage.id)}>{stage.actionLabel}<ArrowRight size={16} aria-hidden="true"/></button>}
++        return <li key={stage.id} className={`trail-stop trail-${stage.id} ${stage.active?'is-recommended':''} ${stage.done?'is-completed':''} ${journey.complete&&stage.primary?'is-portfolio-saved':''} ${stage.locked?'is-locked':'is-actionable'}`}>
++          <div className="trail-node-wrap"><button className="trail-node" disabled={stage.locked||busy} onClick={()=>onNavigate(target)} aria-label={`${stage.title}: ${stage.status}. ${stage.actionLabel}`} aria-describedby={descriptionId} aria-current={stage.active?'step':undefined}><svg className="trail-icon-doodles" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle cx="16" cy="22" r="5"/><path d="m80 15 2 7 7 2-7 2-2 7-2-7-7-2 7-2Z M17 76h12m-6-6v12 M74 79q9-11 12-5"/></svg><Icon size={49} aria-hidden="true"/><span className="trail-node-badge" aria-hidden="true"><StatusIcon size={18}/></span></button></div>
++          <div className="trail-details">{stage.active&&<span className="trail-next-label">Your Next Adventure</span>}<h3>{String(index+1).padStart(2,'0')} · {stage.title}</h3><span className="trail-status"><StatusIcon size={16} aria-hidden="true"/>{stage.status}</span>{stage.historicalPortfolio&&stage.active&&<span className="trail-history-label">Earlier portfolio saved</span>}<p id={descriptionId}>{journey.complete&&stage.id==='celebrate'?'Portfolio saved.':stage.description}{stage.prerequisite&&<span className="trail-prerequisite">{stage.prerequisite}</span>}</p>
++            {stage.primary ? journey.action.requiresSetup?<button className="trail-primary" type="submit" form={setupFormId} disabled={busy||!setupReady}>Start My First Quest<ArrowRight size={18} aria-hidden="true"/></button>:<button className="trail-primary" disabled={stage.locked||busy} onClick={()=>onNavigate(target)}>{stage.actionLabel}<ArrowRight size={18} aria-hidden="true"/></button>:!stage.locked&&<button className="trail-revisit" disabled={busy} onClick={()=>onNavigate(target)}>{stage.actionLabel}<ArrowRight size={16} aria-hidden="true"/></button>}
+           </div>
+         </li>;
+       })}</ol>
+--- a/frontend/src/components/global-ui.css
++++ b/frontend/src/components/global-ui.css
+@@ -4,9 +4,9 @@
+ .global-ui.accent-confirm { --stage-accent:#086f64;--stage-soft:#e9f6f2; }
+ .global-ui.accent-explore { --stage-accent:#225d9b;--stage-soft:#edf4fd; }
+ .global-ui.accent-celebrate { --stage-accent:#096149;--stage-soft:#edf8f1; }
+-.global-ui .main-content { max-width:1200px;padding:0 24px;margin:auto; }
++.global-ui .main-content { max-width:1160px;padding:0 24px;margin:auto; }
+ .global-header { position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid #dbe1ed;box-shadow:0 3px 16px #24304708; }
+-.global-header-top { max-width:1200px;padding:14px 24px;margin:auto;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:24px; }
++.global-header-top { max-width:1160px;padding:14px 24px;margin:auto;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:24px; }
+ .global-ui .global-brand { color:#25324a;font-size:24px;background:transparent;border:0;display:inline-flex;align-items:center;gap:10px;padding:0;justify-self:start;min-height:44px; }
+ .global-brand b { color:#6342b5; }
+ .global-ui .global-brand .brand-symbol { display:grid;place-items:center;width:40px;height:40px;background:#6342b5;color:#fff;border-radius:13px;transform:none; }
+@@ -29,21 +29,21 @@
+ .identity-actions summary { font-size:15px;min-height:44px;display:flex;align-items:center;cursor:pointer; }
+ .identity-actions .identity-review { color:#75510d;font-weight:700; }
+ .global-create-explorer { color:#4c387e;background:#f6f2fc;border:1px solid #d4c8e6;padding:10px 14px;min-height:44px;border-radius:12px;display:flex;align-items:center;gap:8px;font-size:16px; }
+-.global-navigation { max-width:1200px;margin:auto;padding:0 24px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px; }
++.global-navigation { max-width:1160px;margin:auto;padding:0 24px 10px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px; }
+ .global-navigation button { display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;border:1px solid transparent;border-radius:12px;padding:12px;color:#4e607b;background:#fff;font-size:17px;font-weight:650;line-height:1.4; }
+ .global-navigation button:hover { background:#f4f6fb; }
+ .global-navigation button.active { color:var(--stage-accent);background:var(--stage-soft);border-color:var(--stage-accent); }
+-.stage-progress { background:#f8f9fc;border-top:1px solid #edf0f5; }
+-.stage-progress ol { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));max-width:1200px;margin:auto;padding:5px 24px;list-style:none;gap:12px; }
+-.stage-progress li { min-width:0; }
+-.stage-progress .stage-quests{--stage-accent:#6342b5;}.stage-progress .stage-confirm{--stage-accent:#086f64;}.stage-progress .stage-worlds{--stage-accent:#225d9b;}.stage-progress .stage-celebrate{--stage-accent:#096149;}
+-.stage-progress button { width:100%;display:flex;justify-content:center;align-items:center;gap:9px;background:transparent;color:#53637b;border:0;border-radius:10px;min-height:48px;padding:6px;font-size:15px;text-align:left; }
+-.stage-progress small { display:block;font-size:15px;font-weight:400;margin-top:2px;line-height:1.3; }
+-.stage-label { line-height:1.3;font-weight:700; }
+-.stage-marker { width:24px;height:24px;border-radius:50%;display:grid;place-items:center;border:1px solid #b8c1d0;background:#fff;flex-shrink:0;font-size:15px; }
+-.stage-progress .is-complete .stage-marker { border-color:#256a52;background:#e8f4ee;color:#1f614b; }
+-.stage-progress .is-current button { box-shadow:inset 0 -3px var(--stage-accent);color:var(--stage-accent); }
+-.stage-progress button:disabled { opacity:1;color:#647087;cursor:not-allowed; }
++
++
++
++
++
++
++
++
++
++
++
+ .global-review-notice { display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:8px 20px;border:0;border-top:1px solid #d9c68c;background:#fff7df;color:#694e18;font-size:15px;line-height:1.5;text-align:left;min-height:44px; }
+ .global-review-notice svg { flex-shrink:0; }
+ .global-ui :is(button,summary,a,input,select,textarea):focus-visible { outline:3px solid #1e628d;outline-offset:4px; }
+@@ -84,7 +84,24 @@
+ .global-ui .welcome-page .welcome-demo-note { display:none; } /* Shared demo notice stays visible. */
+ .global-ui.accent-explore .career-world-card:not(.world-environment){background:linear-gradient(145deg,#edf4fd,#fff 75%);border-color:#c9dcee;}
+ .global-ui.accent-explore .career-world-label,.global-ui.accent-explore .career-world-reason{color:#23558b;}
+-.global-ui [id],.global-ui h1 { scroll-margin-top:230px; }
+-@media(max-width:800px){.global-header-top{padding:12px 20px;gap:14px;}.global-brand{font-size:22px!important;}.identity-avatar{display:none;}.identity-copy{max-width:150px;}.global-navigation{padding:0 20px 10px;}.stage-progress ol{padding:4px 20px;gap:6px;}.stage-progress small{display:none;}.stage-progress button{gap:6px;}.stage-marker{width:20px;height:20px;}.global-ui .student-trail .trail-stops{display:flex;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:24px;}}
+-@media(max-width:600px){.global-header-top{grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:10px 16px;}.global-ui .global-brand{font-size:20px!important;gap:7px;}.global-ui .global-brand .brand-symbol{width:32px;height:32px;border-radius:10px;}.global-brand svg{width:21px;}.identity-menu{grid-column:2;grid-row:1;}.identity-menu>summary{gap:4px;}.identity-copy{max-width:120px;}.identity-copy strong,.identity-copy>span{font-size:15px;}.xp-badge{grid-column:1/-1;grid-row:2;}.xp-badge>summary{padding:7px 12px;min-height:40px;font-size:15px;}.xp-badge>p{left:0;right:auto;}.global-create-explorer{font-size:15px;padding:8px;max-width:140px;}.global-navigation{gap:4px;padding:0 12px 8px;}.global-navigation button{font-size:17px;gap:4px;padding:8px 4px;flex-direction:column;min-height:64px;}.global-navigation button svg{width:17px;height:17px;}.stage-progress ol{padding:3px 8px;gap:1px;}.stage-progress button{gap:4px;padding:5px 1px;font-size:15px;min-height:44px;}.stage-marker{width:17px;height:17px;font-size:12px;}.stage-marker svg{width:13px;}.global-ui .main-content{padding:0 16px;}.global-ui .page-hero h1,.global-ui .welcome-copy h1,.global-ui .career-discovery-milestone h1{font-size:28px;}.global-ui .spec-page :is(p,li,label,textarea,input,select),.global-ui .page-hero .mission-instruction,.global-ui .welcome-page p,.global-ui .profile-layout :is(p,label,input){font-size:17px;}.global-ui .spec-page :is(small,.small-note,.profile-support,.discovery-interest,.source-list small,.source-list a){font-size:15px;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:22px;}.global-ui .spec-page h2{font-size:24px;}.global-ui .spec-page h3{font-size:20px;}.global-ui .demo-banner{font-size:15px;}.global-review-notice{padding:7px 16px;font-size:15px;}.global-ui [id],.global-ui h1{scroll-margin-top:300px;}}
++.global-ui [id],.global-ui h1 { scroll-margin-top:var(--header-offset,160px); }
++@media(max-width:800px){.global-header-top{padding:12px 20px;gap:14px;}.global-brand{font-size:22px!important;}.identity-avatar{display:none;}.identity-copy{max-width:150px;}.global-navigation{padding:0 20px 10px;}.global-ui .student-trail .trail-stops{display:flex;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:24px;}}
++@media(max-width:600px){.global-header-top{grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;padding:10px 16px;}.global-ui .global-brand{font-size:20px!important;gap:7px;}.global-ui .global-brand .brand-symbol{width:32px;height:32px;border-radius:10px;}.global-brand svg{width:21px;}.identity-menu{grid-column:2;grid-row:1;}.identity-menu>summary{gap:4px;}.identity-copy{max-width:120px;}.identity-copy strong,.identity-copy>span{font-size:15px;}.xp-badge{grid-column:1/-1;grid-row:2;}.xp-badge>summary{padding:7px 12px;min-height:40px;font-size:15px;}.xp-badge>p{left:0;right:auto;}.global-create-explorer{font-size:15px;padding:8px;max-width:140px;}.global-navigation{gap:4px;padding:0 12px 8px;}.global-navigation button{font-size:17px;gap:4px;padding:8px 4px;flex-direction:column;min-height:64px;}.global-navigation button svg{width:17px;height:17px;}.global-ui .main-content{padding:0 16px;}.global-ui .page-hero h1,.global-ui .welcome-copy h1,.global-ui .career-discovery-milestone h1{font-size:28px;}.global-ui .spec-page :is(p,li,label,textarea,input,select),.global-ui .page-hero .mission-instruction,.global-ui .welcome-page p,.global-ui .profile-layout :is(p,label,input){font-size:17px;}.global-ui .spec-page :is(small,.small-note,.profile-support,.discovery-interest,.source-list small,.source-list a){font-size:15px;}.global-ui .spec-page :is(.panel,.quest-panel,.review-panel,.career-portfolio){padding:22px;}.global-ui .spec-page h2{font-size:24px;}.global-ui .spec-page h3{font-size:20px;}.global-ui .demo-banner{font-size:15px;}.global-review-notice{padding:7px 16px;font-size:15px;}.global-ui [id],.global-ui h1{scroll-margin-top:var(--header-offset,220px);}}
+ @media(prefers-reduced-motion:reduce){.global-ui *,.global-ui *::before,.global-ui *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
++
++/* Focused Home/header refinement; Portfolio and workflow components stay intact. */
++.global-ui .welcome-copy h1{font-size:38px;line-height:1.2;color:#17213D;overflow-wrap:anywhere}
++.global-ui .welcome-page p{line-height:1.6}
++.global-ui .welcome-page .welcome-reassurance{font-size:16px;line-height:1.6}
++.global-ui .global-brand,.global-navigation button,.identity-menu>summary,.identity-actions button,.xp-badge>summary,.global-create-explorer,.global-review-notice,.identity-actions summary{min-height:48px}
++.global-navigation button{font-size:17px}
++.identity-actions{max-height:calc(100dvh - var(--header-offset,160px) - 12px);overflow-y:auto;overscroll-behavior:contain}
++.global-ui :is(button,a,input,select,textarea,summary){scroll-margin-top:var(--header-offset,160px);scroll-margin-bottom:20px}
++.global-ui .welcome-page{--welcome-violet:#6D28D9;--welcome-ink:#17213D;--welcome-muted:#4f5d71}
++@media(max-width:760px){.global-header-top{grid-template-columns:minmax(0,1fr) auto;gap:8px 14px}.identity-menu{grid-column:2;grid-row:1}.xp-badge{grid-column:1/-1;grid-row:2}.xp-badge>p{left:0;right:auto}}
++@media(max-width:600px){.global-ui .welcome-copy h1{font-size:30px}.global-navigation button{font-size:16px}.global-ui .welcome-page .trail-details p{font-size:17px}.identity-copy{max-width:120px}.identity-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
++@media(max-height:500px){.global-header{position:relative}.global-ui{--header-offset:16px!important}}
++
++.global-ui .main-content.is-welcome footer button,.global-ui .main-content.is-welcome .alert button{min-height:48px}.global-ui .main-content.is-welcome .alert button{min-width:48px}
++
++.global-ui .main-content.is-welcome footer,.global-ui .main-content.is-welcome footer button,.global-ui .main-content.is-welcome footer span:first-child{color:#4f5d71}
+--- a/frontend/src/components/student-trail.css
++++ b/frontend/src/components/student-trail.css
+@@ -1,50 +1,21 @@
+-/* Only the Student Journey section; the welcome hero and other pages are untouched. */
+-.student-trail{--trail-purple:#5934a8;--trail-teal:#236e64;--trail-ink:#2b2141;--trail-muted:#62596f;margin:44px 0 0;color:var(--trail-ink)}
++/* Home-only trail: state is supplied by the persisted-record projection. */
++.student-trail{--trail-ink:#17213D;--trail-muted:#4f5d71;margin:44px 0 0;color:var(--trail-ink)}
+ .trail-heading{display:flex;justify-content:space-between;gap:24px;align-items:center;margin:0 0 12px}
+-.welcome-page .trail-heading h2{font-size:30px;line-height:1.3;margin:9px 0 10px;letter-spacing:-.5px}
+-.welcome-page .trail-heading p{font-size:18px;margin:0}
+-.trail-heading-art{color:#7150b5;display:flex;align-items:flex-start;gap:6px;margin-right:18px;flex-shrink:0}
+-.welcome-page .trail-guidance{font-size:17px;max-width:none;margin:0 0 24px}
+-.trail-landscape{position:relative;border:1px solid #ded6eb;border-radius:28px;padding:0 20px 24px;background:linear-gradient(130deg,#f0eafb,#fbfaff 50%,#eaf6f1);isolation:isolate}
+-.trail-route{position:absolute;left:20px;top:0;width:calc(100% - 40px);height:300px;z-index:-1;overflow:visible;pointer-events:none}
+-.trail-route path{fill:none;stroke-width:4;stroke-dasharray:9 8;stroke-linecap:round}
+-.trail-route .trail-route-shadow{stroke:#e4ddef;stroke-width:14;stroke-dasharray:none}
+-.trail-scenery{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;border-radius:28px}
+-.trail-leaf{position:absolute;bottom:12px;left:16px;color:#a8c7bb;transform:rotate(-28deg)}
+-.trail-spark{position:absolute;top:17px;left:40%;color:#d5b05b}
+-.trail-flag{position:absolute;right:14px;bottom:14px;color:#a8c2b8;transform:rotate(8deg)}
+-.trail-stops{list-style:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:30px 0 0;margin:0;gap:0;position:relative}
+-.trail-stop{padding:0 8px 12px;text-align:center;min-width:0;position:relative}
+-.trail-stop:nth-child(even){padding-top:90px}
+-.trail-node-wrap{position:relative;display:flex;justify-content:center;margin-bottom:20px}
+-.trail-node{position:relative;display:grid;place-items:center;width:86px;height:86px;border:2px solid #cfc2e6;border-radius:30px;background:#fff;color:#6842aa;box-shadow:0 7px 15px #523a7910;flex-shrink:0;padding:0}
+-.trail-node-badge{position:absolute;right:-6px;bottom:-5px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f2edf9;border:2px solid #fff;color:#6842aa}
+-.is-completed .trail-node{background:#e1f2e9;border-color:#8db9a8;color:#246c54}
+-.is-completed .trail-node-badge{background:#246c54;color:#fff}
+-.is-recommended .trail-node{color:#fff;background:linear-gradient(145deg,#6740b5,#4f2d98);border-color:#fff;box-shadow:0 0 0 4px #7957b9,0 0 0 10px #d9e9e3,0 10px 25px #4e337d25}
+-.is-recommended .trail-node-badge{background:#f6e3a8;color:#66450c}
+-.is-locked .trail-node{color:#71667e;border-color:#cbc3d3;background:#eeeaf2;box-shadow:none;cursor:not-allowed}
+-.is-locked .trail-node-badge{color:#62596f;background:#e4dfeb}
+-.trail-node:disabled{opacity:1}
+-.trail-details{border-radius:20px;padding:12px 8px 16px}
+-.is-recommended .trail-details{background:#fff;border:1px solid #bca6db;box-shadow:0 8px 24px #5f398e0d;padding:16px 12px}
+-.trail-next-label{display:block;font-size:16px;font-weight:750;line-height:1.5;color:#5934a8;margin-bottom:12px}
+-.welcome-page .trail-details h3{font-size:22px;line-height:1.4;margin:0 0 10px;color:#2b2141;letter-spacing:-.3px}
+-.trail-status{font-size:16px;line-height:1.5;display:flex;align-items:center;justify-content:center;gap:5px;color:#62596f;font-weight:650;margin-bottom:12px}
+-.trail-status>svg{flex-shrink:0}
+-.is-completed:not(.is-locked):not(.is-recommended) .trail-status{color:#236e64}
+-.is-recommended .trail-status{color:#5934a8}
+-.trail-history-label{display:block;color:#236e64;font-size:16px;line-height:1.5;margin:-4px 0 12px}
+-.welcome-page .trail-details p{font-size:17px;line-height:1.65;margin:0;color:#62596f;overflow-wrap:anywhere}
+-.trail-prerequisite{display:block;margin-top:10px;font-size:16px;line-height:1.6}
+-.trail-primary{display:inline-flex;justify-content:center;align-items:center;gap:8px;background:#5934a8;color:#fff;border:1px solid #5934a8;padding:12px 13px;border-radius:13px;font-size:17px;font-weight:650;line-height:1.5;text-decoration:none;min-height:48px;margin-top:18px;width:100%;white-space:normal;text-align:center}
+-.trail-primary svg{flex-shrink:0}
+-.trail-primary:hover:not(:disabled){background:#452284;color:#fff}
+-.trail-primary:disabled{opacity:1;cursor:not-allowed;background:#e9e4ef;color:#62596f;border-color:#c9c0d4}
+-.trail-revisit{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:transparent;color:#5934a8;border:0;padding:10px 4px;min-height:44px;margin-top:12px;font-size:16px;font-weight:650;line-height:1.5}
+-.student-trail button:focus-visible,.student-trail a:focus-visible{outline:3px solid #08776b;outline-offset:5px}
+-@media(prefers-reduced-motion:no-preference){.trail-node,.trail-revisit,.trail-primary{transition:transform .16s ease,box-shadow .16s ease,background-color .16s ease}.trail-node:hover:not(:disabled){transform:translateY(-4px) rotate(-3deg)}.trail-revisit:hover:not(:disabled){transform:translateX(3px)}}
+-@media(max-width:1050px) and (min-width:901px){.trail-landscape{padding-left:8px;padding-right:8px}.trail-stop{padding-left:4px;padding-right:4px}.trail-route{left:8px;width:calc(100% - 16px)}.welcome-page .trail-details h3{font-size:20px}.trail-details{padding-left:4px;padding-right:4px}.is-recommended .trail-details{padding-left:8px;padding-right:8px}.trail-primary{padding:10px 8px}}
+-@media(max-width:900px){.trail-landscape{padding:12px 24px 20px}.trail-route{display:none}.trail-stops{display:flex;flex-direction:column;padding:0}.trail-stops:before{content:'';position:absolute;top:66px;bottom:90px;left:42px;width:0;border-left:4px dashed #9fb9b0;z-index:-1}.trail-stop,.trail-stop:nth-child(even){display:grid;grid-template-columns:86px minmax(0,1fr);gap:24px;padding:24px 0;text-align:left}.trail-node-wrap{margin:8px 0 0;align-self:start}.trail-details{padding:6px 8px}.is-recommended .trail-details{padding:20px}.trail-status{justify-content:flex-start}.trail-primary{width:auto;min-width:180px}.trail-revisit{justify-content:flex-start}.trail-spark{left:auto;right:18px;top:12px}.trail-leaf{left:auto;right:15px;bottom:25px}.trail-flag{display:none}.welcome-page .trail-details h3{font-size:22px}}
+-@media(max-width:600px){.student-trail{margin-top:32px}.trail-heading{gap:12px}.welcome-page .trail-heading h2{font-size:26px}.welcome-page .trail-heading p{font-size:17px}.trail-heading-art{margin-right:0}.trail-heading-art>svg:first-child{width:30px}.trail-heading-art>svg:last-child{display:none}.trail-landscape{border-radius:22px;padding:8px 14px 14px}.trail-stop,.trail-stop:nth-child(even){grid-template-columns:66px minmax(0,1fr);gap:14px;padding:22px 0}.trail-node{width:66px;height:66px;border-radius:23px}.trail-node>svg{width:34px;height:34px}.trail-node-badge{width:26px;height:26px;right:-4px;bottom:-4px}.trail-node-badge svg{width:15px}.trail-stops:before{left:32px;top:63px;bottom:120px;border-width:3px}.trail-details{padding:4px 0}.is-recommended .trail-details{padding:16px 12px}.welcome-page .trail-details h3{font-size:20px}.trail-status{font-size:16px;flex-wrap:wrap;justify-content:flex-start}.trail-next-label{font-size:16px}.trail-primary{width:100%;min-width:0;font-size:17px;padding:12px 10px;gap:5px}.trail-details .trail-revisit{font-size:16px}.trail-heading-art{align-self:flex-start;margin-top:8px}.trail-landscape .trail-leaf{opacity:.5}}
+-@media(prefers-reduced-motion:reduce){.student-trail *,.student-trail *:before,.student-trail *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.trail-node:hover:not(:disabled),.trail-revisit:hover:not(:disabled){transform:none}.trail-leaf,.trail-flag{transform:none}}
++.welcome-page .trail-heading h2{font-size:28px;line-height:1.3;margin:9px 0 10px;letter-spacing:-.5px}
++.welcome-page .trail-heading p{font-size:18px;margin:0}.trail-heading-art{color:#6D28D9;display:flex;gap:6px;flex-shrink:0}
++.welcome-page .trail-guidance{font-size:16px;line-height:1.6;max-width:none;margin:0 0 24px}
++.trail-landscape{position:relative;border:1px solid #d9dfea;border-radius:28px;padding:0 16px 24px;background:linear-gradient(120deg,#f2ecff,#f8faff 50%,#e9f7f0);isolation:isolate}
++.trail-route{position:absolute;left:16px;top:0;width:calc(100% - 32px);height:260px;z-index:-1;overflow:visible;pointer-events:none}.trail-route path{fill:none;stroke-width:4;stroke-dasharray:9 8;stroke-linecap:round}.trail-route .trail-route-shadow{stroke:#fff;stroke-width:13;stroke-dasharray:none}.trail-route-mobile{display:none}
++.trail-scenery{position:absolute;inset:0;pointer-events:none;z-index:-1;overflow:hidden;border-radius:28px}.trail-leaf{position:absolute;bottom:12px;left:16px;color:#b1d5c3;transform:rotate(-28deg)}.trail-spark{position:absolute;top:17px;left:42%;color:#946000}.trail-flag{position:absolute;right:14px;bottom:14px;color:#a8c2b8;transform:rotate(8deg)}
++.trail-stops{list-style:none;display:grid;grid-template-columns:repeat(var(--trail-count,4),minmax(0,1fr));padding:34px 0 0;margin:0;gap:18px;position:relative}
++.trail-stop{--stop-color:#6D28D9;--stop-soft:#f1eaff;display:flex;flex-direction:column;text-align:center;min-width:0;position:relative}.trail-confirm{--stop-color:#0F766E;--stop-soft:#e6f6f1}.trail-worlds{--stop-color:#1D4ED8;--stop-soft:#eaf1ff}.trail-celebrate{--stop-color:#065F46;--stop-soft:#e5f5eb}.trail-stop:nth-child(even){padding-top:64px}
++.trail-node-wrap{position:relative;display:flex;justify-content:center;margin-bottom:18px}.trail-node{position:relative;display:grid;place-items:center;width:104px;height:104px;border:2px solid var(--stop-color);border-radius:32px;background:var(--stop-soft);color:var(--stop-color);box-shadow:0 5px 14px #2430470b;flex-shrink:0;padding:0}.trail-icon-doodles{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;opacity:.45}.trail-node-badge{position:absolute;right:-5px;bottom:-5px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--stop-color);color:var(--stop-color)}
++.is-completed .trail-node-badge{background:var(--stop-color);color:#fff}.is-recommended .trail-node,.is-portfolio-saved .trail-node{color:#fff;background:var(--stop-color);border-color:#fff;box-shadow:0 0 0 3px var(--stop-color),0 0 0 9px var(--stop-soft),0 6px 18px #24304714}.is-recommended .trail-node-badge,.is-portfolio-saved .trail-node-badge{background:#FBBF24;color:#17213D;border-color:#fff}.is-locked .trail-node{color:#566479;border-color:#adb8c9;background:#f8fafc;box-shadow:none;cursor:not-allowed}.is-locked .trail-node-badge{color:#566479;background:#f1f5f9;border-color:#adb8c9}.trail-node:disabled{opacity:1}
++.trail-details{flex:1;display:flex;flex-direction:column;align-items:stretch;border:1px solid #d7dfeb;border-radius:20px;padding:20px 16px;background:#fff;box-shadow:0 5px 16px #17213d08;min-width:0}.is-recommended .trail-details{border:2px solid var(--stop-color);box-shadow:0 0 0 3px var(--stop-soft)}.is-portfolio-saved .trail-details{border:2px solid #065F46;box-shadow:0 0 0 3px #fef3c7}.trail-next-label{display:block;font-size:15px;font-weight:750;line-height:1.5;color:var(--stop-color);margin-bottom:12px}
++.welcome-page .trail-details h3{font-size:22px;line-height:1.35;margin:0 0 12px;color:#17213D;letter-spacing:-.3px}.trail-status{font-size:16px;line-height:1.5;display:flex;align-items:center;justify-content:center;gap:6px;color:#4f5d71;font-weight:650;margin-bottom:12px;flex-wrap:wrap}.trail-status svg{flex-shrink:0}.is-completed:not(.is-locked) .trail-status,.is-recommended .trail-status{color:var(--stop-color)}.trail-history-label{color:#4f5d71;font-size:15px;line-height:1.5;margin:-3px 0 12px}.welcome-page .trail-details p{font-size:18px;line-height:1.6;margin:0 0 8px;color:#4f5d71;overflow-wrap:anywhere}.trail-prerequisite{display:block;margin-top:10px;font-size:16px;line-height:1.6}
++.trail-primary{display:inline-flex;justify-content:center;align-items:center;gap:8px;background:var(--stop-color);color:#fff;border:1px solid var(--stop-color);padding:12px;border-radius:13px;font-size:17px;font-weight:650;line-height:1.5;text-decoration:none;min-height:48px;margin-top:auto;width:100%;white-space:normal;text-align:center}.trail-details p+.trail-primary{margin-top:18px}.trail-primary svg{flex-shrink:0}.trail-primary:hover:not(:disabled){filter:brightness(.9)}.trail-primary:disabled{opacity:1;cursor:not-allowed;background:#eef1f6;color:#4f5d71;border-color:#b5c0cf}.is-portfolio-saved .trail-primary{background:#FBBF24;color:#17213D;border-color:#d99b09}.trail-revisit{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:transparent;color:var(--stop-color);border:0;padding:10px 4px;min-height:48px;margin-top:auto;font-size:16px;font-weight:650;line-height:1.5;text-decoration:underline;text-underline-offset:4px}.trail-details p+.trail-revisit{margin-top:12px}.student-trail button:focus-visible{outline:3px solid #17213D;outline-offset:5px}
++@media(prefers-reduced-motion:no-preference){.trail-node,.trail-revisit,.trail-primary{transition:transform .16s ease,box-shadow .16s ease}.trail-node:hover:not(:disabled){transform:translateY(-3px)}.trail-revisit:hover:not(:disabled){transform:translateX(2px)}}
++@media(max-width:1050px) and (min-width:901px){.trail-stops{gap:10px}.trail-details{padding:18px 12px}.welcome-page .trail-details h3{font-size:20px}}
++@media(max-width:900px){.trail-landscape{padding:12px 18px 20px}.trail-route{display:none}.trail-route-mobile{display:block;position:absolute;left:18px;top:26px;width:80px;height:calc(100% - 130px);z-index:-1;pointer-events:none;overflow:visible}.trail-route-mobile path{fill:none;stroke:#608b82;stroke-width:4;stroke-dasharray:8 8;vector-effect:non-scaling-stroke}.trail-stops{display:flex;flex-direction:column;padding:0;gap:0}.trail-stop,.trail-stop:nth-child(even){display:grid;grid-template-columns:80px minmax(0,1fr);gap:20px;padding:22px 0;text-align:left}.trail-node-wrap{margin:10px 0 0;align-self:start}.trail-node{width:80px;height:80px;border-radius:26px}.trail-node>svg:not(.trail-icon-doodles){width:42px;height:42px}.trail-details,.is-recommended .trail-details{padding:22px}.trail-status{justify-content:flex-start}.trail-primary{width:auto;align-self:flex-start;min-width:180px;margin-top:18px}.trail-revisit{justify-content:flex-start;align-self:flex-start;margin-top:12px}.trail-spark{left:auto;right:18px;top:12px}.trail-leaf{left:auto;right:15px;bottom:25px}.trail-flag{display:none}}
++@media(max-width:600px){.student-trail{margin-top:32px}.trail-heading{gap:12px}.welcome-page .trail-heading h2{font-size:26px}.welcome-page .trail-heading p{font-size:17px}.trail-heading-art>svg:first-child{width:30px}.trail-heading-art>svg:last-child{display:none}.trail-landscape{border-radius:22px;padding:8px 12px 14px}.trail-stop,.trail-stop:nth-child(even){grid-template-columns:72px minmax(0,1fr);gap:12px;padding:20px 0}.trail-node{width:72px;height:72px;border-radius:24px}.trail-node>svg:not(.trail-icon-doodles){width:37px;height:37px}.trail-node-badge{width:28px;height:28px;right:-4px;bottom:-4px}.trail-node-badge svg{width:16px}.trail-route-mobile{left:12px;width:72px}.trail-details,.is-recommended .trail-details{padding:18px 13px}.welcome-page .trail-details h3{font-size:20px}.welcome-page .trail-details p{font-size:17px}.trail-status{font-size:15px;gap:4px}.trail-next-label{font-size:15px}.trail-primary{width:100%;min-width:0;font-size:17px;padding:12px 9px;gap:5px}.trail-heading-art{align-self:flex-start;margin-top:8px}}
++@media(prefers-reduced-motion:reduce){.student-trail *,.student-trail *::before,.student-trail *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.trail-node:hover:not(:disabled),.trail-revisit:hover:not(:disabled){transform:none}.trail-leaf,.trail-flag{transform:none}}
+--- a/frontend/src/pages/Welcome.jsx
++++ b/frontend/src/pages/Welcome.jsx
+@@ -1,6 +1,6 @@
+ import React, {useState} from 'react';
+ import {ArrowRight, Compass, Sparkles, Globe2, RefreshCw} from 'lucide-react';
+-import {welcomeJourney} from '../welcomeJourney';
++import {studentExperience} from '../studentExperience';
+ import {welcomeHero} from '../welcomeHero';
+ import {welcomeMode} from '../welcomeMode';
+ import {Button} from '../components/Shared';
+@@ -13,11 +13,12 @@
+   if (loading) return <section className="welcome-page welcome-state" role="status"><Compass size={42} aria-hidden="true"/><h1>Welcome to CareerQuest AI.</h1><p>Getting your adventure ready…</p></section>;
+   if (error) return <section className="welcome-page welcome-state"><div role="alert"><h1>Let’s get you started.</h1><p>{error}</p></div><Button onClick={onRetry}><RefreshCw size={19} aria-hidden="true"/>Try again</Button></section>;
+   const mode = welcomeMode(state,createdProfileId);
+-  const journey = experience?.journey || welcomeJourney(state,questTotal);
+-  const hero = welcomeHero(state,questTotal);
++  const progress = experience || studentExperience(state,null,questTotal);
++  const journey = progress.journey;
++  const hero = welcomeHero(state,questTotal,progress);
+   const savedNickname = state?.profile?.alias?.trim() || 'explorer';
+   const start = event=>{event.preventDefault();onCreate({nickname,grade});};
+-  const title = mode==='setup'?'Your future is an adventure':mode==='aboard'?`Welcome aboard, ${savedNickname}!`:journey.greeting;
++  const title = mode==='setup'?'Your future is an adventure':mode==='aboard'?`Welcome aboard, ${savedNickname}!`:hero.title;
+   const message = mode==='setup'?'Discover what interests you, explore new possibilities, and take a small next step. Start by creating your fictional explorer.':mode==='aboard'?'Your explorer is saved. Your first discovery is waiting, and there are no right or wrong answers.':hero.message;
+   return <div className={`welcome-page welcome-mode-${mode}`}>
+     <section className="welcome-intro" aria-labelledby="welcome-title">
+--- a/frontend/src/pages/welcome.css
++++ b/frontend/src/pages/welcome.css
+@@ -1,10 +1,10 @@
+-.welcome-page{--welcome-violet:#5c38b5;--welcome-ink:#24183f;--welcome-muted:#635972;color:var(--welcome-ink);padding:30px 0 12px;font-size:18px;line-height:1.65}
++.welcome-page{--welcome-violet:#5c38b5;--welcome-ink:#24183f;--welcome-muted:#635972;color:var(--welcome-ink);padding:30px 0 12px;font-size:18px;line-height:1.6}
+ .welcome-page *{box-sizing:border-box;min-width:0}
+ .welcome-intro{display:grid;grid-template-columns:1.15fr 1fr;gap:40px;align-items:center;padding:52px 42px;background:linear-gradient(120deg,#f0e9ff,#faf8ff);border:1px solid #e3d9f4;border-radius:28px;overflow:hidden}
+ .welcome-eyebrow{font-size:15px;font-weight:700;letter-spacing:1px;color:#654b8a;overflow-wrap:anywhere}
+ .welcome-page h1{font-size:36px;line-height:1.22;letter-spacing:-.8px;margin:18px 0 24px;max-width:550px;overflow-wrap:anywhere;font-weight:750}
+ .welcome-page h1 em{font-style:normal;color:var(--welcome-violet)}
+-.welcome-page p{font-size:18px;color:var(--welcome-muted);line-height:1.75;margin:0 0 24px;max-width:620px}
++.welcome-page p{font-size:18px;color:var(--welcome-muted);line-height:1.6;margin:0 0 24px;max-width:620px}
+ .welcome-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:28px 0 20px}
+ .welcome-page .button{min-height:52px;font-size:18px;padding:16px 23px;gap:14px;white-space:normal;line-height:1.5}
+ .welcome-secondary{color:#5c38b5;background:none;border:0;min-height:48px;padding:12px;font-size:17px;font-weight:600;text-align:left}
+@@ -61,7 +61,7 @@
+ .welcome-journey .active .welcome-stage-status{color:#5c38b5}
+ .welcome-journey .complete .welcome-stage-status{color:#24674f}
+ .welcome-journey h3{font-size:21px;margin:0 0 10px}
+-.welcome-journey p{font-size:17px;line-height:1.65;margin:0}
++.welcome-journey p{font-size:17px;line-height:1.6;margin:0}
+ .welcome-stage-lock{display:block;font-size:17px;margin-top:10px}
+ .welcome-page .welcome-how h2{overflow-wrap:anywhere}
+ @media(max-width:1050px){.welcome-journey{grid-template-columns:repeat(3,minmax(0,1fr))}}
+--- a/frontend/src/studentExperience.js
++++ b/frontend/src/studentExperience.js
+@@ -6,7 +6,8 @@
+  const needsReview=!confirmed&&Boolean(state?.profile_preferences||state?.confirmation_version);
+  const explored=(career?.portfolio?.explorations?.length||0)>0||(state?.research_count||0)>0;
+  const selected=(career?.portfolio?.shortlist||[]).filter(item=>!item.exploration.is_stale);
+- const finished=Boolean(career?.portfolio_completion?.active);
++ const finished=Boolean(confirmed&&career?.portfolio_completion?.active&&!career.portfolio_completion.active.is_stale);
++ const portfolioReady=Boolean(confirmed&&career?.portfolio_completion?.ready);
+  const earlierPortfolio=(career?.portfolio_completion?.history?.length||0)>0;
+  const hasPaths=(career?.path_preferences?.history?.length||0)>0;
+  const careerKnown=career!==null;
+@@ -24,14 +25,14 @@
+   {id:'confirm',title:'Confirm',done:confirmed,available:discovered||needsReview,previouslyCompleted:needsReview,description:confirmed?'Your Explorer Profile is confirmed.':needsReview?'Your preferences changed. Review and explicitly reconfirm.':'Review your clues and confirm what feels right.',status:needsReview?'Profile Needs Review':confirmed?'Completed':'Review your profile'},
+   {id:'worlds',title:'Explore',done:explored,available:confirmed||explored,description:explored?'Your saved research remains yours to revisit.':'Explore supported careers, then save a possibility you want to keep.',status:explored?'Completed':'Explore careers'},
+   {id:'celebrate',title:'Celebrate',done:finished||earlierPortfolio,available:(confirmed&&(selected.length>0||!careerKnown)&&career?.next_action?.kind!=='choose_paths')||earlierPortfolio||hasPaths,previouslyCompleted:earlierPortfolio&&!finished,prerequisite:!exists?'Create your explorer above to begin.':!confirmed?'Confirm your current Explorer Profile first.':career?.next_action?.kind==='choose_paths'?'Save your exploration preferences or choose I’m Still Exploring on Explore Careers first.':'Save a career with your confirmed profile to begin your portfolio.',description:finished?'Your current Career Discovery Portfolio snapshot is saved.':earlierPortfolio?'Previous portfolio snapshots are saved. Review current choices before a new version.':'Bring your confirmed interests, saved careers and paths together.',status:!careerKnown&&confirmed?'Open saved progress':finished?'Completed':earlierPortfolio?'Earlier portfolio saved':hasPaths?'Paths saved':'Create your portfolio'},
+- ].map(stage=>({...stage,locked:!stage.available,active:stage.id===action.id}));
+- return {confirmed,needsReview,explored,finished,earlierPortfolio,action,stages,
+-  journey:{greeting:exists?`Hi, ${state.profile.alias?.trim()||'explorer'}! 👋`:'Welcome, future explorer! 👋',action,stages}};
++ ].map(stage=>({...stage,locked:!stage.available,active:!finished&&stage.id===action.id,primary:stage.id===action.id}));
++ return {confirmed,needsReview,explored,finished,portfolioReady,earlierPortfolio,careerKnown,action,stages,
++  journey:{greeting:exists?`Hi, ${state.profile.alias?.trim()||'explorer'}! 👋`:'Welcome, future explorer! 👋',complete:finished,action,stages}};
+ }
+ 
+ export function primaryDestination(page,screen='worlds') {
+- if(page==='welcome'||page==='profiles')return 'welcome';
+- if(page==='quests'||page==='confirm')return 'quests';
++ if(page==='welcome')return 'welcome';
++ if(page==='quests')return 'quests';
+  if((page==='worlds'||page==='portfolio')&&screen==='worlds')return 'worlds';
+  if(page==='portfolio'||page==='celebrate'||(page==='worlds'&&screen!=='worlds'))return 'portfolio';
+  if(page==='worlds')return 'worlds';
+--- a/frontend/src/studentTrail.js
++++ b/frontend/src/studentTrail.js
+@@ -1,10 +1,13 @@
+-// Presentation states come from welcomeJourney's persisted-backend projection.
++// Presentation states come from Home's persisted-backend projection.
+ // Recommendation never changes availability or erases saved completion.
+ export function trailMilestones(journey) {
+   return journey.stages.map(stage => ({
+     ...stage,
+-    status:stage.locked?'Locked':stage.active?'Recommended Next':stage.done?'Completed':'Available',
++    primary:stage.primary??stage.active,
++    target:(stage.primary??stage.active)?journey.action.target||stage.id:stage.id==='celebrate'&&stage.done?'portfolio':stage.id,
++    historicalPortfolio:stage.id==='celebrate'&&stage.previouslyCompleted&&!journey.complete,
++    status:stage.locked?'Locked':stage.active?(stage.id==='celebrate'&&stage.previouslyCompleted?'Update available':'Recommended Next'):stage.done?(stage.id==='celebrate'&&stage.previouslyCompleted?'Earlier portfolio saved':'Completed'):'Available',
+     prerequisite:!stage.locked?'':stage.prerequisite|| (journey.action.requiresSetup?'Create your explorer above to begin.':stage.id==='confirm'?'Complete all three discovery quests first.':'Confirm your current Explorer Profile first.'),
+-    actionLabel:stage.active?journey.action.label:stage.done?`Revisit ${stage.title}`:`Open ${stage.title}`,
++    actionLabel:(stage.primary??stage.active)?journey.action.label:stage.done?`Revisit ${stage.title}`:`Open ${stage.title}`,
+   }));
+ }
+--- a/frontend/src/welcomeHero.js
++++ b/frontend/src/welcomeHero.js
+@@ -1,23 +1,24 @@
+-// Motivational copy and metadata from the persisted profile response only.
+-export function welcomeHero(state, questTotal = 3) {
+-  let message;
+-  if (!state) message='Your first discovery quest is waiting. Choose a fictional nickname and grade, then begin from your Adventure Trail. There are no right or wrong answers.';
+-  else if (!state.quest_complete) message=state.quest_count>0
+-    ? `You’ve completed ${state.quest_count} of ${questTotal} discovery quests. Every clue helps you notice what sparks your curiosity.`
+-    : `A fresh adventure is waiting for you. ${questTotal} short discovery quests will help you collect your first clues.`;
+-  else if (!state.confirmed) message=state.profile_preferences || state.confirmation_version
+-    ? 'Your interests can grow with you. Your updated Explorer Profile is ready for another review, and your earlier discoveries are saved.'
+-    : 'Your discovery quests are complete. These clues are yours to shape into an Explorer Profile that feels right.';
+-  else if (state.latest_plan) message=state.reflection_count>0
+-    ? 'You’ve saved a roadmap and reflected on your discoveries. There’s always room to explore a new possibility.'
+-    : 'Your roadmap is saved. Small steps and a little reflection can help you keep growing.';
+-  else if (state.research_count>0) message='You’ve explored new possibilities. Your curiosity is becoming a collection of ideas to build on.';
+-  else message='Your Explorer Profile is confirmed. A world of possibilities is waiting for your curiosity.';
+-  const grade=state?.profile?.grade;
+-  const points=state?.profile?.xp;
+-  return {
+-    message,
+-    grade:Number.isInteger(grade)&&grade>=9&&grade<=12?grade:null,
+-    points:Number.isInteger(points)&&points>=0?points:null,
+-  };
++import {studentExperience} from './studentExperience.js';
++
++// Informational copy only. Progress and current-vs-historical portfolios come
++// from the same persisted-record projection as Home's Adventure Trail.
++export function welcomeHero(state, questTotal=3, progress=studentExperience(state)) {
++  const nickname=state?.profile?.alias?.trim()||'explorer';
++  let title=`Hi, ${nickname}! 👋`,message,phase;
++  if(!state){phase='setup';message='Your first discovery quest is waiting. Choose a fictional nickname and grade, then begin from your Adventure Trail. There are no right or wrong answers.';}
++  else if(!state.quest_complete){phase=state.quest_count>0?'partial':'new';message=state.quest_count>0
++    ?`You’ve completed ${state.quest_count} of ${questTotal} discovery quests. Every clue helps you notice what sparks your curiosity.`
++    :`A fresh adventure is waiting for you. ${questTotal} short discovery quests will help you collect your first clues.`;}
++  else if(!progress.confirmed){phase='review';message=progress.needsReview
++    ?'Your interests can grow with you. Your updated Explorer Profile is ready for another review. Any earlier career selections and portfolios stay saved.'
++    :'Your discovery quests are complete. These clues are yours to shape into an Explorer Profile that feels right.';}
++  else if(progress.finished){phase='saved';title=`Hi, ${nickname}! Your career portfolio is ready.`;message='You’ve brought together your interests and career choices. You can explore a new direction whenever you’re ready.';}
++  else if(progress.earlierPortfolio){phase='changed';message=progress.portfolioReady
++    ?'Your earlier career portfolio stays saved. Your current choices have changed, and a new preview is ready for you to review.'
++    :'Your earlier career portfolio stays saved. Explore your current interests and career choices before creating an updated version.';}
++  else if(progress.portfolioReady){phase='ready';message='Your confirmed interests and saved career choices are ready to come together. Celebrate your discoveries, then review your Career Discovery Portfolio.';}
++  else if(progress.explored){phase='research';message='You’ve started exploring career possibilities. Keep the careers that interest you and choose your exploration preferences—or keep your priorities open.';}
++  else {phase='research_ready';message='Your Explorer Profile is confirmed. Explore Career Worlds, compare possibilities and save the careers you want to revisit.';}
++  const grade=state?.profile?.grade,points=state?.profile?.xp;
++  return {title,message,phase,grade:Number.isInteger(grade)&&grade>=9&&grade<=12?grade:null,points:Number.isInteger(points)&&points>=0?points:null};
+ }
+--- a/frontend/tests/global-ui.test.js
++++ b/frontend/tests/global-ui.test.js
+@@ -21,8 +21,8 @@
+  assert.deepEqual(PRIMARY_PAGES.map(([id,label])=>[id,label]),[['welcome','Home'],['quests','Discover'],['worlds','Explore Careers'],['portfolio','My Portfolio']]);
+  const html=shell();const navigation=html.match(/<nav class="global-navigation"[^]*?<\/nav>/)[0];assert.equal((navigation.match(/<button/g)||[]).length,4);assert.doesNotMatch(navigation,/My Roadmap|My Journey|Explorer Profile|Celebrate/);
+ });
+-test('Home also keeps the shared navigation identity and progress',()=>{
+- const html=shell();assert.match(html,/Ari Fictional/);assert.match(html,/Grade 11/);assert.match(html,/Explorer Points/);assert.match(html,/Adventure progress/);assert.match(html,/Home/);
++test('Home keeps shared identity with one navigation and no global progress strip',()=>{
++ const html=shell();assert.match(html,/Ari Fictional/);assert.match(html,/Grade 11/);assert.match(html,/Explorer Points/);assert.doesNotMatch(html,/Adventure progress|stage-progress/);assert.match(html,/Home/);
+ });
+ test('identity menu exposes profile switching and secondary saved activities',()=>{
+  const html=shell(confirmed,{page:'worlds',career});for(const text of ['Student profile: Ari Fictional, Grade 11','Explorer Profile','Switch Explorer','Earlier saved activities','My Roadmap','My Journey'])assert.ok(html.includes(text),text);assert.match(html,/<details class="identity-menu"/);
+@@ -58,17 +58,17 @@
+ });
+ test('milestone and saved portfolio share My Portfolio navigation and Celebrate stage',()=>{
+  for(const page of ['worlds','portfolio'])for(const screen of ['milestone','portfolio']){assert.equal(primaryDestination(page,screen),'portfolio');assert.equal(activeStage(page,screen,studentExperience(confirmed,eligible)),'celebrate');}
+- assert.equal(primaryDestination('confirm'),'quests');assert.equal(primaryDestination('worlds','worlds'),'worlds');assert.equal(primaryDestination('roadmap'),null);
++ assert.equal(primaryDestination('confirm'),null);assert.equal(primaryDestination('worlds','worlds'),'worlds');assert.equal(primaryDestination('roadmap'),null);
+ });
+ test('actual Home trail has four stages and one primary action, never repeated in shell',()=>{
+  const experience=studentExperience(confirmed,eligible);const home=React.createElement(Welcome,{state:confirmed,experience,onNavigate:()=>{},onCreate:()=>{}});const html=shell(confirmed,{career:eligible},home);
+  assert.equal((html.match(/class="student-trail"/g)||[]).length,1);assert.equal((html.match(/class="trail-primary"/g)||[]).length,1);assert.match(html,/Discover, Confirm, Explore, Celebrate adventure trail/);assert.doesNotMatch(shell(confirmed,{page:'worlds',career}),/class="student-trail"/);
+ });
+-test('shell uses current-stage semantics and does not mutate records',()=>{
+- const before=JSON.stringify({confirmed,completed});const html=shell(confirmed,{page:'worlds',career:completed});assert.match(html,/aria-current="page"/);assert.match(html,/aria-current="step"/);assert.equal(JSON.stringify({confirmed,completed}),before);
++test('shell highlights only the actual primary page and does not mutate records',()=>{
++ const before=JSON.stringify({confirmed,completed});const html=shell(confirmed,{page:'worlds',career:completed});assert.match(html,/aria-current="page"/);assert.doesNotMatch(html,/aria-current="step"/);assert.equal(JSON.stringify({confirmed,completed}),before);
+ });
+ test('shared typography layout and reduced motion have explicit rules',async()=>{
+- const css=await readFile(join(root,'src/components/global-ui.css'),'utf8');assert.match(css,/max-width:1200px/);assert.match(css,/position:sticky;top:0/);assert.match(css,/font-size:36px/);assert.match(css,/font-size:28px/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);assert.match(css,/animation:none!important;transition:none!important/);assert.match(css,/focus-visible/);
++ const css=await readFile(join(root,'src/components/global-ui.css'),'utf8');assert.match(css,/max-width:1160px/);assert.match(css,/position:sticky;top:0/);assert.match(css,/font-size:36px/);assert.match(css,/font-size:28px/);assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);assert.match(css,/animation:none!important;transition:none!important/);assert.match(css,/focus-visible/);
+ });
+ test('My Portfolio uses the same research component with read-model progress callbacks',async()=>{
+  const app=await readFile(join(root,'src/App.jsx'),'utf8');assert.match(app,/page==='worlds'\|\|page==='portfolio'/);assert.match(app,/entry=\{careerEntry\}/);assert.match(app,/career-discovery/);assert.doesNotMatch(app,/from ['"]\.\/pages\/MyPortfolio/);
+--- /dev/null
++++ b/frontend/tests/home-header-refinement.test.js
+@@ -0,0 +1,82 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import React from 'react';
++import {renderToStaticMarkup} from 'react-dom/server';
++import {build} from 'esbuild';
++import {mkdir,mkdtemp,rm,readFile} from 'node:fs/promises';
++import {join} from 'node:path';
++import {fileURLToPath,pathToFileURL} from 'node:url';
++import {studentExperience,primaryDestination} from '../src/studentExperience.js';
++import {welcomeHero} from '../src/welcomeHero.js';
++import {trailMilestones} from '../src/studentTrail.js';
++const root=fileURLToPath(new URL('../',import.meta.url)),cache=join(root,'node_modules','.cache');await mkdir(cache,{recursive:true});
++const dir=await mkdtemp(join(cache,'home-header-'));let Shell,Welcome;
++try{const outfile=join(dir,'components.cjs');await build({stdin:{contents:"export {default as Shell} from './src/components/AppShell.jsx';export {default as Welcome} from './src/pages/Welcome.jsx';",resolveDir:root},outfile,bundle:true,platform:'node',format:'cjs',external:['react'],loader:{'.css':'empty'},logLevel:'silent'});const m=(await import(pathToFileURL(outfile).href)).default;Shell=m.Shell;Welcome=m.Welcome;}finally{await rm(dir,{recursive:true,force:true});}
++const fresh={profile:{id:'fictional-home',alias:'Aster Fictional',grade:10,xp:0},quest_count:0,quest_complete:false,confirmed:false,profile_version:1,research_count:0};
++const discovered={...fresh,quest_count:3,quest_complete:true};
++const confirmed={...discovered,confirmed:true,profile:{...fresh.profile,xp:70},profile_preferences:{interests:['art']}};
++const research={confirmed:true,profile_context:{profile_version:1},portfolio:{explorations:[{id:'research'}],shortlist:[]},portfolio_completion:{ready:false,active:null,history:[]},path_preferences:{history:[]}};
++const ready={...research,portfolio:{...research.portfolio,shortlist:[{world_id:'design',exploration:{is_stale:false}}]},portfolio_completion:{ready:true,active:null,history:[]},next_action:{kind:'view_portfolio'}};
++const saved={...ready,portfolio_completion:{ready:true,active:{id:'portfolio-1',is_stale:false},history:[{id:'portfolio-1'}]}};
++const home=(state,career=null)=>{const experience=studentExperience(state,career);return renderToStaticMarkup(React.createElement(Shell,{state,career,page:'welcome',onNavigate:()=>{}},React.createElement(Welcome,{state,experience,onNavigate:()=>{}})));};
++const hero=(state,career=null)=>welcomeHero(state,3,studentExperience(state,career));
++test('shared header has exactly one four-item primary menu and no progress-strip navigation',()=>{
++ for(const page of ['welcome','quests','confirm','worlds','portfolio']){const html=renderToStaticMarkup(React.createElement(Shell,{state:confirmed,career:saved,page,careerScreen:page==='portfolio'?'portfolio':'worlds',onNavigate:()=>{}}));assert.equal((html.match(/<nav\b/g)||[]).length,1);assert.doesNotMatch(html,/Adventure progress|stage-progress/);const menu=html.match(/<nav[^]*?<\/nav>/)[0];for(const label of ['Home','Discover','Explore Careers','My Portfolio'])assert.ok(menu.includes(label));assert.doesNotMatch(menu,/Celebrate|Confirm|My Roadmap|My Journey/);}
++});
++test('only actual destinations are highlighted; profile and synthetic switcher have no false Home selection',()=>{
++ assert.equal(primaryDestination('welcome'),'welcome');assert.equal(primaryDestination('quests'),'quests');assert.equal(primaryDestination('worlds','worlds'),'worlds');assert.equal(primaryDestination('portfolio','portfolio'),'portfolio');
++ for(const page of ['confirm','profiles','journey','roadmap'])assert.equal(primaryDestination(page),null);
++ for(const screen of ['milestone','portfolio'])assert.equal(primaryDestination('worlds',screen),'portfolio');
++});
++test('new partial and unconfirmed states use saved counts and profile gates',()=>{
++ assert.equal(hero(fresh).phase,'new');assert.equal(hero({...fresh,quest_count:1}).phase,'partial');assert.match(hero({...fresh,quest_count:1}).message,/1 of 3/);assert.equal(hero(discovered).phase,'review');
++ assert.equal(studentExperience({...fresh,quest_count:1}).action.label,'Continue Quest 2');assert.equal(studentExperience(discovered).action.id,'confirm');assert.ok(studentExperience(discovered).stages.find(s=>s.id==='worlds').locked);
++});
++test('confirmed research and portfolio-ready messages correspond to persisted backend state',()=>{
++ assert.equal(hero(confirmed).phase,'research_ready');assert.equal(hero({...confirmed,research_count:1},research).phase,'research');assert.equal(hero({...confirmed,research_count:1},ready).phase,'ready');assert.match(hero(confirmed,ready).message,/Career Discovery Portfolio/);
++});
++test('current portfolio uses an accurate greeting and four completed stages without recommendations',()=>{
++ const result=studentExperience(confirmed,saved),html=home(confirmed,saved);assert.equal(result.finished,true);assert.equal(result.journey.complete,true);assert.equal(hero(confirmed,saved).title,'Hi, Aster Fictional! Your career portfolio is ready.');assert.match(html,/brought together your interests and career choices/);
++ assert.equal((html.match(/\bis-completed\b/g)||[]).length,4);assert.doesNotMatch(html,/Recommended Next|Previously completed|Your Next Adventure|is-recommended/);assert.match(html,/Portfolio saved\./);assert.equal((html.match(/class="trail-primary"/g)||[]).length,1);assert.equal((html.match(/class="trail-revisit"/g)||[]).length,3);
++ const milestone=trailMilestones(result.journey).find(s=>s.id==='celebrate');assert.equal(milestone.target,'portfolio');assert.equal(milestone.actionLabel,'View My Portfolio');assert.equal(milestone.status,'Completed');
++});
++test('earlier saved portfolio is not represented as current after career choices change',()=>{
++ const changed={...saved,portfolio_completion:{ready:true,active:null,history:[{id:'portfolio-1'}]}};const result=studentExperience(confirmed,changed),html=home(confirmed,changed);
++ assert.equal(result.finished,false);assert.equal(hero(confirmed,changed).phase,'changed');assert.match(html,/earlier career portfolio stays saved/);assert.doesNotMatch(html,/Your career portfolio is ready\./);assert.equal((html.match(/\bis-recommended\b/g)||[]).length,1);assert.match(html,/Earlier portfolio saved/);assert.doesNotMatch(html,/Previously completed/);
++});
++test('changed profile keeps historical stages revisitable and explicitly requests reconfirmation',()=>{
++ const state={...confirmed,confirmed:false,profile_version:2},career={...saved,confirmed:false,profile_context:null,portfolio_completion:{ready:false,active:null,history:[{id:'portfolio-1'}]}};const result=studentExperience(state,career),stages=trailMilestones(result.journey);
++ assert.equal(result.action.id,'confirm');assert.match(hero(state,career).message,/updated Explorer Profile.*review/);for(const id of ['worlds','celebrate'])assert.equal(stages.find(s=>s.id===id).locked,false);assert.equal(stages.find(s=>s.id==='celebrate').target,'portfolio');assert.match(home(state,career),/Profile Needs Review/);
++});
++test('stale or mismatched active portfolio data cannot claim the current portfolio is ready',()=>{
++ for(const [state,career] of [[{...confirmed,confirmed:false},saved],[confirmed,{...saved,profile_context:{profile_version:2}}],[confirmed,{...saved,portfolio_completion:{...saved.portfolio_completion,active:{id:'old',is_stale:true}}}]]){assert.equal(studentExperience(state,career).finished,false);assert.doesNotMatch(hero(state,career).title,/portfolio is ready/);}
++});
++test('legacy roadmap reflection fields never control the Home message',()=>{
++ for(const career of [null,research,ready,saved]){const state={...confirmed,latest_plan:{version:99},reflection_count:100};assert.doesNotMatch(hero(state,career).title+' '+hero(state,career).message,/roadmap|reflection/i);}
++});
++test('returning hero remains informational with one dominant action inside the Home trail',()=>{
++ for(const [state,career] of [[fresh,null],[{...fresh,quest_count:1},null],[discovered,null],[confirmed,research],[confirmed,ready],[confirmed,saved]]){const html=home(state,career),intro=html.match(/<section class="welcome-intro"[^]*?<\/section>/)[0];assert.doesNotMatch(intro,/<button|<a\b/);assert.equal((html.match(/class="trail-primary"/g)||[]).length,1);}
++});
++test('full trail appears only on Home; profile menu remains available on other pages',()=>{
++ const html=renderToStaticMarkup(React.createElement(Shell,{state:confirmed,career:saved,page:'worlds',onNavigate:()=>{}}));assert.doesNotMatch(html,/student-trail/);assert.match(html,/Explorer Profile/);assert.match(html,/Switch Explorer/);assert.match(home(confirmed,saved),/trail-confirm/);
++});
++test('long saved nickname is escaped and remains fully accessible without fabricated metadata',()=>{
++ const nickname='FictionalExplorerOfManyBrightPossibilities';const state={...fresh,profile:{...fresh.profile,alias:nickname}};const html=home(state);assert.ok(html.includes(`Student profile: ${nickname}, Grade 10`));assert.match(html,/<strong>0<\/strong> Explorer Points/);assert.ok(html.includes(`Hi, ${nickname}!`));assert.equal(hero(null).grade,null);assert.equal(hero(null).points,null);
++});
++test('projection and repeated renders cannot mutate XP selections or portfolio history',()=>{
++ const before=JSON.stringify({confirmed,saved});for(let i=0;i<3;i++){home(confirmed,saved);studentExperience(confirmed,saved);hero(confirmed,saved);}assert.equal(JSON.stringify({confirmed,saved}),before);
++});
++test('trail colors control sizes focus and reduced motion are explicit',async()=>{
++ const css=await readFile(join(root,'src/components/student-trail.css'),'utf8');for(const color of ['#6D28D9','#0F766E','#1D4ED8','#065F46','#FBBF24','#17213D'])assert.ok(css.includes(color));assert.match(css,/background:#fff/);assert.match(css,/width:104px;height:104px/);assert.match(css,/min-height:48px/);assert.match(css,/grid-template-columns:72px minmax\(0,1fr\)/);assert.match(css,/focus-visible/);assert.match(css,/prefers-reduced-motion:reduce/);
++});
++test('shared header measures its own height without resetting scroll and adapts for short zoomed viewports',async()=>{
++ const source=await readFile(join(root,'src/components/AppShell.jsx'),'utf8'),css=await readFile(join(root,'src/components/global-ui.css'),'utf8');assert.match(source,/ResizeObserver/);assert.doesNotMatch(source,/scrollTo|StageProgress/);assert.match(css,/var\(--header-offset/);assert.match(css,/@media\(max-height:500px\)/);assert.match(css,/max-width:1160px/);assert.match(css,/text-overflow:ellipsis/);
++});
++test('saturated trail buttons and gold completion action meet normal-text contrast',async()=>{
++ const css=await readFile(join(root,'src/components/student-trail.css'),'utf8');
++ const lightness=hex=>{const values=hex.match(/\w\w/g).map(v=>parseInt(v,16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);return .2126*values[0]+.7152*values[1]+.0722*values[2];};
++ const contrast=(a,b)=>{const [hi,lo]=[lightness(a),lightness(b)].sort((a,b)=>b-a);return (hi+.05)/(lo+.05);};
++ const palette=[...css.matchAll(/--stop-color:#([A-Fa-f0-9]{6})/g)].map(match=>match[1]);assert.equal(new Set(palette).size,4);
++ for(const color of palette)assert.ok(contrast('ffffff',color)>=4.5,color);
++ assert.ok(contrast('17213D','FBBF24')>=4.5);
++});
+--- a/frontend/tests/welcome-hero.test.js
++++ b/frontend/tests/welcome-hero.test.js
+@@ -21,9 +21,9 @@
+   }
+   assert.match(welcomeHero(confirmed).message,/Profile is confirmed/);
+ });
+-test('saved roadmaps and reconfirmation produce different progress messages',()=>{
++test('legacy roadmap fields do not leak into Home and reconfirmation remains explicit',()=>{
+   const saved={...confirmed,latest_plan:{version:2},profile_preferences:{interests:['science']}};
+-  assert.match(welcomeHero(saved).message,/roadmap is saved/);
++  assert.doesNotMatch(welcomeHero(saved).message,/roadmap|reflect/i);assert.match(welcomeHero(saved).message,/Career Worlds/);
+   assert.match(welcomeHero({...saved,confirmed:false,profile_draft:{version:2}}).message,/updated Explorer Profile.*review/);
+   assert.doesNotMatch(welcomeHero({...saved,confirmed:false}).message,/Profile is confirmed/);
+ });

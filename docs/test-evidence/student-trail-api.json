@@ -1,0 +1,15 @@
+{
+  "fictional_profile_id": "e9d08cb0-9bcf-481f-8d79-1ebb0594e9e5",
+  "xp": 80,
+  "quest_count": 3,
+  "research_count": 0,
+  "saved_roadmap_version": 1,
+  "reflection_count": 1,
+  "unconfirmed_api_gates": {
+    "/explore": 409,
+    "/roadmap/propose": 409,
+    "/roadmap/save": 409,
+    "/reflect": 409
+  },
+  "state_unchanged_after_blocked_calls": true
+}

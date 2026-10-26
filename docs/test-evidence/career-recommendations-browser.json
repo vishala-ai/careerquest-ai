@@ -1,0 +1,30 @@
+{
+  "actual_server_restart_persistence": true,
+  "path_history_versions": 1,
+  "current_paths_stale": true,
+  "shortlist_count": 2,
+  "exploration_count": 7,
+  "test_student": "Lyra Fictional",
+  "prerequisites": "UI creation; existing API quests and profile confirmations",
+  "live_groq": false,
+  "backend_tests": 155,
+  "frontend_tests": 112,
+  "browser_checks": [
+    "three confirmed recommendations with reasons",
+    "active top-navigation resets detail",
+    "navigation from My Journey opens recommendations",
+    "three-career comparison with 25 source links",
+    "explicit two-career shortlist",
+    "no automatic primary/secondary assignment",
+    "student-selected Design primary / Software secondary",
+    "reload persists both paths and opens recommendations",
+    "explicit saved-detail resume",
+    "375px landing/path and comparison no document overflow",
+    "768px and 1279px comparison no document overflow",
+    "unconfirmed edit invalidates recommendation and path state, preserving history",
+    "reconfirmed nature profile shows exactly one match",
+    "unmatched profile shows zero recommendations with all four careers accessible",
+    "no student developer controls or JS errors"
+  ],
+  "xp_note": "70 XP throughout career research, explicit saves and path persistence. Existing explicit reconfirmation rewards subsequently brought this isolated student to 90 XP."
+}

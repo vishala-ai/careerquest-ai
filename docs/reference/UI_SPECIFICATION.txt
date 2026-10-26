@@ -1,0 +1,69 @@
+Source: https://docs.google.com/document/d/1eKs2o8w3tMGNiXEEtQmLSXZwJwCepsIrgDkrxufst2w/edit
+Title: CareerQuest AI — UI/UX Design Specification for Codex
+Revision: AHj4eMSLdAtuTm6FKyl2P2XjAXRYDwoC1PSCCy0xhc6O03pg7oSuGNXK8JugIiGK_2ZgQzaQrBX2YPIRdzpsda1pcYZsQolEVEwcN7WNa_k
+Read in full: 17 sections, 12,936 characters; October 24, 2026.
+This is target design evidence, not an implementation-completion claim.
+
+CareerQuest AI — UI/UX Design Specification
+Gamified High School-to-College Adventure | React + FastAPI | Codex implementation reference
+Version 1.0 • October 24, 2026 • Target: Grades 9–12 • Demo uses fictional students only
+1. Product experience and design principles
+CareerQuest AI should feel like a welcoming discovery game, not a traditional data dashboard or an aptitude exam. Students explore interests, review their own interpretations, research career and college possibilities, build an editable plan, and reflect. The experience is exploratory, not predictive; never score career suitability or admission probability.
+Design principles: (1) student agency—choices can be edited; (2) visible progress—quests, XP and badges reward exploration, not performance; (3) trustworthy guidance—career and college claims show sources and uncertainty; (4) safe personalization—confirmation before using inferred preferences; (5) continuity—saved progress and plan versions; (6) accessible, responsive UI.
+2. Information architecture and navigation
+Six primary pages in this order: Dashboard → Discovery Quests → Explorer Profile → Career Worlds → My Roadmap → My Journey. The Dashboard is the entry/resume point. After confirmation, Career Worlds and My Roadmap may be accessed in either order; My Journey records reflections and past versions.
+Persistent navigation: app logo and name; six page links; fictional student name and grade; XP summary; active quest/progress indicator. On narrow screens, use a compact menu. Clearly indicate the current page. Navigation must not silently discard unsaved edits.
+3. Page 1 — Dashboard: My Adventure Home
+Purpose: welcome the student and show the next useful action without requiring them to understand the whole product.
+Components: greeting with fictional avatar; grade badge; XP total; completed quest count; current exploration interests (confirmed versus unconfirmed visibly distinguished); next-step hero card; career-world teaser cards; latest saved roadmap summary; recent activity.
+Primary action: Continue My Adventure. Route dynamically: incomplete quests → Discovery Quests; completed quests/unconfirmed profile → Explorer Profile; confirmed profile → Career Worlds or latest unfinished roadmap task.
+States: first visit, partial quests, ready for profile review, confirmed profile, roadmap saved, loading/error. XP and quest completion must be derived from persisted records, not frontend-only counters.
+4. Page 2 — Discovery Quests: Learn About Yourself
+Purpose: replace a long questionnaire with three short scenario-based challenges. No right or wrong answers.
+Quest 1 Discover Your Spark: choose enjoyable activities (building, creating, investigating, helping, organizing). Quest 2 Choose Your Mission: choose a role in a real-world school/community challenge. Quest 3 Your Working Style: choose how to explore an idea (hands-on, research, collaboration, creative ideation).
+Components: large illustrated scenario card; 3–5 tappable options; quest progress bar; Previous/Continue controls; brief nonjudgmental feedback; XP celebration on first completion; final Unlock Explorer Profile transition.
+Behavior: record raw answers and timestamps; allow edits; prevent duplicate XP when replaying; maintain keyboard accessibility. Do not infer personality traits, intelligence or ability from choices.
+5. Page 3 — Explorer Profile: Review & Confirm
+Purpose: show what the quest choices suggest and let the student decide what actually represents them. This is a required confirmation gate before personalized recommendations.
+Components: friendly summary derived from actual answers; clearly separated 'You chose' facts and 'You might enjoy exploring' suggestions; editable interest chips; preferred learning style; next exploration goal; 'I'm not sure yet'; optional free-text correction; Confirm My Explorer Profile button; Edit Profile action after confirmation.
+Behavior: all three quests must be complete. Students can add/remove interests and reject inferred suggestions. Confirmation persists profile version, source quest responses, edited fields and timestamp. Later edits create a new unconfirmed version. Personalized roadmap and research must reject unconfirmed profiles server-side, not only disable a button.
+Copy example: 'Based on your choices, you may enjoy exploring science and technology. Does this feel right? You can change anything.' Avoid 'You are destined to be an engineer.'
+6. Page 4 — Career Worlds: Explore Possibilities
+Purpose: help students explore career families and related college majors using cited evidence, without locking them into one career.
+Components: career-world cards (technology, health, design, business, environment, community); searchable topic field; career detail drawer showing typical activities, useful skills, related majors and suggested experiments; source links; source freshness and uncertainty indicators; Save for Later action; Ask CareerQuest question field.
+Agent behavior: select a bounded research tool when needed, retrieve curated source passages, and show a source-grounded explanation. Clearly label offline template versus live Ollama response and keyword versus optional semantic retrieval. Missing or stale school-specific information must be labeled unverified.
+Add a collapsible AI Agent Activity panel: selected action/tool, why it was selected in user-friendly terms, retrieved source titles, validation status, duration if measured, and errors/retries. Do not expose hidden model reasoning or secrets.
+7. Page 5 — My Roadmap: Plan Your Next Steps
+Purpose: transform confirmed interests and grade level into a practical, adjustable exploration plan. The plan is a suggestion, not an admission guarantee.
+Components: current grade and confirmed profile version; roadmap generation form; proposed milestone cards grouped by near-term / this school year / future exploration; estimated effort; source or rationale; student review panel; Confirm & Save button; editable completion status; Replan button; roadmap version history.
+Behavior: proposal remains separate from saved roadmap until explicit confirmation. Replanning after a profile change creates a new version and preserves old versions. Display missing prerequisites or unverified college-specific information rather than inventing deadlines, costs or eligibility.
+Human review: require student confirmation to save; for consequential school/course decisions, suggest discussion with a parent/guardian or counselor. If implementing LangGraph interrupts, test durable pause/resume and idempotent saves; otherwise label UI confirmation accurately rather than claiming graph-level HITL.
+8. Page 6 — My Journey: Progress & Reflection
+Purpose: let students revisit exploration, celebrate effort, reflect on experiences, and change direction without penalty.
+Components: timeline of quest completions and XP events; saved careers; roadmap versions; reflection cards; 'What did you enjoy?' and 'What would you change?' prompts; Compare previous and current interests; next mission suggestion.
+Behavior: reflection is saved with timestamp; any preference change creates a proposed updated profile requiring confirmation before personalized replanning. Never erase history or award duplicate rewards for the same event.
+9. Visual design system
+Direction: playful but mature enough for Grades 9–12. Modern education-game aesthetic, generous whitespace, rounded cards, light background, friendly vector illustrations, small celebratory motion. Avoid childish mascots, casino-like mechanics, dense tables and corporate dashboards.
+Suggested tokens (design recommendations, not current implementation): primary violet #7257E8; secondary teal #13A89E; accent amber #F3B64B; ink #17213D; muted text #607089; canvas #F7F9FD; card #FFFFFF; danger #C53E50. Check contrast ratios before adoption. Font: system sans or Inter. Border radius 16–20px for cards; spacing based on 8px increments; responsive layout at approximately 375px, 768px and 1280px widths.
+Interaction conventions: visible focus rings; minimum comfortable touch targets; hover is never the only affordance; reduced-motion preference; semantic headings; text alternatives for illustrations; progress communicated by text and not color alone; loading, empty, success and error states on every async page.
+10. Reusable UI components
+AppShell/Nav; StudentHeader; XPProgress; QuestCard; QuestProgress; ChoiceTile; RewardToast; InterestChipEditor; ProfileSummary; ConfirmationPanel; CareerWorldCard; SourceCitation; AgentActivityTrace; RoadmapMilestone; RoadmapReview; ReflectionCard; VersionHistory; ErrorState; SkeletonLoader; SyntheticDemoBanner.
+11. API, data and state contracts
+Keep React as a presentation layer and FastAPI as the authoritative gate. Reuse existing Python careerquest services, database and LangGraph graph. Validate all inputs server-side. Suggested endpoints (adapt to existing API, do not duplicate): GET profile; POST quest response; GET profile proposal; POST profile confirmation; GET career research; POST roadmap proposal; POST roadmap confirmation; POST reflection; GET agent run trace; GET journey history.
+Persist student ID, grade, raw quest responses, unique XP events, proposed/confirmed profile versions, roadmap proposals and confirmations, reflection events, agent runs and source references. Use synthetic student IDs only. Never trust client-supplied XP, confirmation status or financial/admissions claims.
+12. Agent and RAG transparency
+An agentic demo should show a meaningful tool choice, not just a fixed navigation path. Allowed actions: ask follow-up, retrieve career info, retrieve general college guidance, propose roadmap, record reflection. Display what action ran and whether it succeeded. Limit tool calls and time; on failure show a retry or honest unavailable state without inventing sources.
+RAG trace: user question → retrieved source titles/passages → model context (sanitized) → generated answer → citation validation. Keep curated career sources separate from college-specific requirements; do not present an illustrative dataset as verified current university information.
+13. Privacy, safety and demo boundaries
+Week 3 is a fictional-student prototype. No real minors' personal data, production accounts, actual applications, scholarship submissions, direct messages or admissions predictions. Profile suggestions are editable and not aptitude judgments. A real deployment needs privacy/consent review, authentication, role-based access, retention/deletion controls, age-appropriate content and counselor oversight.
+14. End-to-end acceptance tests
+A. Complete each quest and receive XP once; replay does not double-award. B. Quest-derived profile summary reflects actual choices; student edits and confirms. C. Direct API request for personalized roadmap before confirmation is rejected. D. Career research shows valid source IDs and URLs; unsupported facts are withheld or labeled. E. Roadmap proposal is not saved until confirmed. F. Reflection changes interests and creates a new profile/roadmap version without deleting history. G. Simulated research failure preserves profile and shows honest error. H. Reload/restart retains confirmed progress. I. Mobile navigation, keyboard operation and reduced motion work. J. If LangGraph persistence is claimed, pause/resume across restart is tested.
+15. Codex execution instructions
+Implement incrementally: 1) inspect current React/FastAPI repository and tests; 2) align six-page navigation and reusable design tokens; 3) finish Discovery Quests and Explorer Profile confirmation; 4) complete Career Worlds and grounded citations; 5) roadmap confirmation and My Journey; 6) add Agent Activity Trace and failure handling; 7) test responsive/accessibility states; 8) run full Python tests, npm build and browser walkthrough. Preserve existing working code, SQLite data, LangGraph behavior and Streamlit fallback.
+Required Codex report after each increment: files changed, exact commands, pass/fail/skip results, screenshots of affected screens if available, known limitations, and whether features are mocked, offline or live. Do not claim live Ollama, vector search, or durable LangGraph behavior unless executed and verified.
+16. Five-minute demo flow
+0:00 dashboard and student problem; 0:30 three quests + XP; 1:25 review/edit/confirm Explorer Profile; 2:10 Career Worlds with sources and Agent Activity Trace; 3:05 roadmap proposal and student confirmation; 3:50 reflection and new version; 4:20 simulated research-tool failure and safe recovery; 4:45 conclusion and honest limitations.
+17. Implementation status caveat
+This document is a target UI/UX specification, not evidence that every described component is already implemented. Codex must compare it against the current repository, preserve completed features and verify the actual running application before claiming completion.
+
+
